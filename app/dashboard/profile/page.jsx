@@ -9,6 +9,7 @@ export default function ProfilePage() {
   const router = useRouter()
   const fileInputRef = useRef(null)
   const [profile, setProfile] = useState(null)
+  const [userId, setUserId] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -18,7 +19,10 @@ export default function ProfilePage() {
     const getProfile = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) { router.push('/login'); return }
-      const { data } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
+      const uid = sessionData.session.user.id
+      setUserId(uid)
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', uid).single()
+      if (error) { setMessage('Error loading profile: ' + error.message); setLoading(false); return }
       setProfile(data)
       setLoading(false)
     }
@@ -28,6 +32,7 @@ export default function ProfilePage() {
   const handleSave = async () => {
     setSaving(true)
     setMessage('')
+    if (!userId) { setMessage('Not logged in. Please refresh.'); setSaving(false); return }
     const { error } = await supabase.from('profiles').update({
       full_name: profile.full_name,
       phone: profile.phone,
@@ -36,35 +41,36 @@ export default function ProfilePage() {
       state: profile.state,
       address_line: profile.address_line,
       company_name: profile.company_name,
-      experience_years: profile.experience_years,
+      experience_years: profile.experience_years ? Number(profile.experience_years) : null,
       profile_completed: true,
-    }).eq('id', profile.id)
+    }).eq('id', userId)
     setSaving(false)
-    if (error) { setMessage('Error saving. Try again.'); return }
+    if (error) { setMessage('Error: ' + error.message); return }
     setMessage('Profile saved successfully!')
   }
 
   const handleAvatarUpload = async (e) => {
     const file = e.target.files[0]
     if (!file) return
+    if (file.size > 5 * 1024 * 1024) { setMessage('File too large. Max 5MB.'); return }
     setUploading(true)
     setMessage('')
     const fileExt = file.name.split('.').pop()
-    const filePath = `${profile.id}.${fileExt}`
+    const filePath = `${userId}.${fileExt}`
     const { error: uploadError } = await supabase.storage
       .from('avatars')
       .upload(filePath, file, { upsert: true })
     if (uploadError) {
-      setMessage('Error uploading photo. Try again.')
+      setMessage('Upload error: ' + uploadError.message)
       setUploading(false)
       return
     }
     const { data } = supabase.storage.from('avatars').getPublicUrl(filePath)
     const { error: updateError } = await supabase.from('profiles')
       .update({ avatar_url: data.publicUrl })
-      .eq('id', profile.id)
+      .eq('id', userId)
     if (updateError) {
-      setMessage('Photo uploaded but profile not updated. Save again.')
+      setMessage('Photo uploaded but save failed: ' + updateError.message)
       setUploading(false)
       return
     }
@@ -92,8 +98,8 @@ export default function ProfilePage() {
         {/* Avatar upload */}
         <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px', marginBottom: '24px', textAlign: 'center' }}>
           <div
-            style={{ width: '88px', height: '88px', borderRadius: '50%', background: '#F5EFE6', border: '2px solid #8B5E3C', margin: '0 auto 20px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
             onClick={() => fileInputRef.current?.click()}
+            style={{ width: '88px', height: '88px', borderRadius: '50%', background: '#F5EFE6', border: '2px solid #8B5E3C', margin: '0 auto 20px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
           >
             {profile?.avatar_url
               ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
