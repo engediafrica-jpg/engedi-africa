@@ -75,6 +75,8 @@ export default function DashboardPage() {
     { title: 'Messages', desc: 'Chat with artisans and suppliers', href: '/messages' },
     { title: 'Browse Professionals', desc: 'Find artisans, suppliers and professionals', href: '/browse' },
     { title: 'Marketplace', desc: 'Browse and compare building materials', href: '/marketplace' },
+    { title: 'My Orders', desc: 'Track your material orders and deliveries', href: '/orders' },
+    { title: 'Project Hub', desc: 'Manage your construction projects', href: '/projects' },
     { title: 'Training Hub', desc: 'Learn professional skills and earn certificates', href: '/training' },
   ]
 
