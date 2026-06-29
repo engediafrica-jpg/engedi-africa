@@ -4,6 +4,67 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
+const roleMenus = {
+  project_owner: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with professionals', href: '/messages' },
+    { title: 'Q&A Forum', desc: 'Ask construction questions', href: '/qa' },
+    { title: 'Browse Professionals', desc: 'Find artisans, suppliers and professionals', href: '/browse' },
+    { title: 'Marketplace', desc: 'Browse and compare building materials', href: '/marketplace' },
+    { title: 'My Orders', desc: 'Track your material orders', href: '/orders' },
+    { title: 'Project Hub', desc: 'Manage your construction projects', href: '/projects' },
+  ],
+  artisan: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+    { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
+    { title: 'Training Hub', desc: 'Learn skills and earn certificates', href: '/training' },
+  ],
+  supplier: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with buyers', href: '/messages' },
+    { title: 'Manage Listings', desc: 'Add and manage your products', href: '/marketplace' },
+    { title: 'My Orders', desc: 'View and fulfill orders received', href: '/orders' },
+  ],
+  professional: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+    { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
+    { title: 'Marketplace', desc: 'Browse building materials', href: '/marketplace' },
+    { title: 'Project Hub', desc: 'Manage client projects', href: '/projects' },
+  ],
+  service_provider: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+    { title: 'Project Hub', desc: 'Manage service projects', href: '/projects' },
+  ],
+  equipment_provider: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
+    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+  ],
+}
+
+const roleWelcome = {
+  project_owner: { title: 'Project Owner', tip: 'Browse verified artisans, compare material prices, and manage your build — all in one place.' },
+  artisan: { title: 'Artisan', tip: 'Complete your profile and get verified to start receiving job enquiries from project owners.' },
+  supplier: { title: 'Supplier', tip: 'List your products, manage orders, and connect with buyers across Nigeria.' },
+  professional: { title: 'Professional', tip: 'Showcase your credentials, answer questions, and connect with clients who need your expertise.' },
+  service_provider: { title: 'Service Provider', tip: 'Get verified and connect with project owners who need your services.' },
+  equipment_provider: { title: 'Equipment Provider', tip: 'List your equipment and connect with construction projects that need it.' },
+}
+
 export default function DashboardPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -58,34 +119,15 @@ export default function DashboardPage() {
     </div>
   )
 
-  const roleLabel = {
-    project_owner: 'Project Owner',
-    artisan: 'Artisan',
-    supplier: 'Supplier',
-    professional: 'Professional',
-    service_provider: 'Service Provider',
-    equipment_provider: 'Equipment Provider',
-  }
-
-  const menuItems = [
-    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
-    { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
-    { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
-    { title: 'Q&A Forum', desc: 'Ask and answer construction questions', href: '/qa' },
-    { title: 'Messages', desc: 'Chat with artisans and suppliers', href: '/messages' },
-    { title: 'Browse Professionals', desc: 'Find artisans, suppliers and professionals', href: '/browse' },
-    { title: 'Marketplace', desc: 'Browse and compare building materials', href: '/marketplace' },
-    { title: 'My Orders', desc: 'Track your material orders and deliveries', href: '/orders' },
-    { title: 'Project Hub', desc: 'Manage your construction projects', href: '/projects' },
-    { title: 'Training Hub', desc: 'Learn professional skills and earn certificates', href: '/training' },
-  ]
-
+  const menuItems = roleMenus[profile?.role] || roleMenus.project_owner
+  const roleInfo = roleWelcome[profile?.role] || roleWelcome.project_owner
   const isVerified = profile?.verification_status === 'approved'
   const isProfileComplete = profile?.profile_completed === true
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
 
+      {/* Topbar */}
       <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
@@ -122,7 +164,7 @@ export default function DashboardPage() {
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
                 <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A1A', margin: 0 }}>
-                  {profile?.full_name || 'Welcome'}
+                  Welcome, {profile?.full_name?.split(' ')[0] || 'there'} 👋
                 </h1>
                 {isVerified && (
                   <span style={{ background: '#e8f8f0', border: '1.5px solid #2ecc71', color: '#27ae60', fontSize: '12px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px' }}>
@@ -131,8 +173,9 @@ export default function DashboardPage() {
                 )}
               </div>
               <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '12px', fontWeight: '600', padding: '3px 12px', borderRadius: '20px' }}>
-                {roleLabel[profile?.role] || profile?.role}
+                {roleInfo.title}
               </span>
+              <p style={{ color: '#666666', fontSize: '13px', margin: '10px 0 0', lineHeight: '1.6' }}>{roleInfo.tip}</p>
             </div>
           </div>
         </div>
@@ -193,6 +236,28 @@ export default function DashboardPage() {
           <div style={{ background: '#fde8e8', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
             <p style={{ margin: '0 0 4px', fontWeight: '700', color: '#c0392b', fontSize: '14px' }}>❌ Verification rejected</p>
             {profile?.admin_notes && <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>{profile.admin_notes}</p>}
+          </div>
+        )}
+
+        {/* Artisan training prompt */}
+        {profile?.role === 'artisan' && (
+          <div style={{ background: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontWeight: '700', color: '#FFFFFF', margin: '0 0 4px', fontSize: '15px' }}>🏆 Complete your training</p>
+              <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>Finish all 5 modules to earn your EnGedi Certified Professional badge</p>
+            </div>
+            <Link href="/training" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Start Training</Link>
+          </div>
+        )}
+
+        {/* Supplier listings prompt */}
+        {profile?.role === 'supplier' && (
+          <div style={{ background: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontWeight: '700', color: '#FFFFFF', margin: '0 0 4px', fontSize: '15px' }}>📦 List your products</p>
+              <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>Add your materials so buyers across Nigeria can find and order from you</p>
+            </div>
+            <Link href="/marketplace" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Manage Listings</Link>
           </div>
         )}
 
