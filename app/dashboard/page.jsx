@@ -20,6 +20,7 @@ const roleMenus = {
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
     { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
     { title: 'Training Hub', desc: 'Learn skills and earn certificates', href: '/training' },
@@ -28,6 +29,7 @@ const roleMenus = {
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with buyers', href: '/messages' },
     { title: 'Manage Listings', desc: 'Add and manage your products', href: '/marketplace' },
     { title: 'My Orders', desc: 'View and fulfill orders received', href: '/orders' },
@@ -36,6 +38,7 @@ const roleMenus = {
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
     { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
     { title: 'Marketplace', desc: 'Browse building materials', href: '/marketplace' },
@@ -45,6 +48,7 @@ const roleMenus = {
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
     { title: 'Project Hub', desc: 'Manage service projects', href: '/projects' },
   ],
@@ -52,6 +56,7 @@ const roleMenus = {
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
+    { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
   ],
 }
@@ -123,6 +128,8 @@ export default function DashboardPage() {
   const roleInfo = roleWelcome[profile?.role] || roleWelcome.project_owner
   const isVerified = profile?.verification_status === 'approved'
   const isProfileComplete = profile?.profile_completed === true
+
+  const needsBankDetails = ['artisan', 'supplier', 'professional', 'service_provider', 'equipment_provider'].includes(profile?.role) && !profile?.bank_account_name
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
@@ -236,6 +243,17 @@ export default function DashboardPage() {
           <div style={{ background: '#fde8e8', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
             <p style={{ margin: '0 0 4px', fontWeight: '700', color: '#c0392b', fontSize: '14px' }}>❌ Verification rejected</p>
             {profile?.admin_notes && <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>{profile.admin_notes}</p>}
+          </div>
+        )}
+
+        {/* Bank details prompt for providers */}
+        {needsBankDetails && isProfileComplete && (
+          <div style={{ background: '#FFF8F0', border: '1.5px solid #8B5E3C', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px', fontSize: '15px' }}>Add your bank details</p>
+              <p style={{ color: '#666666', fontSize: '13px', margin: 0 }}>Required to receive payments when clients confirm orders</p>
+            </div>
+            <Link href="/dashboard/bank-details" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Add Now</Link>
           </div>
         )}
 
