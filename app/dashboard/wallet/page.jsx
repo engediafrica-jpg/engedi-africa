@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -13,28 +13,6 @@ export default function WalletPage() {
   const [amount, setAmount] = useState('')
   const [paying, setPaying] = useState(false)
   const [message, setMessage] = useState('')
-  const [paystackReady, setPaystackReady] = useState(false)
-
-  const loadPaystack = useCallback(() => {
-    return new Promise((resolve) => {
-      if (window.PaystackPop) { resolve(true); return }
-      const existing = document.getElementById('paystack-script')
-      if (existing) {
-        existing.addEventListener('load', () => resolve(true))
-        return
-      }
-      const script = document.createElement('script')
-      script.id = 'paystack-script'
-      script.src = 'https://js.paystack.co/v1/inline.js'
-      script.async = true
-      script.onload = () => {
-        setPaystackReady(true)
-        resolve(true)
-      }
-      script.onerror = () => resolve(false)
-      document.head.appendChild(script)
-    })
-  }, [])
 
   useEffect(() => {
     const getData = async () => {
@@ -48,79 +26,79 @@ export default function WalletPage() {
       setLoading(false)
     }
     getData()
-    loadPaystack().then(ready => setPaystackReady(ready))
+
+    // Load Paystack script
+    const existing = document.getElementById('paystack-script')
+    if (!existing) {
+      const script = document.createElement('script')
+      script.id = 'paystack-script'
+      script.src = 'https://js.paystack.co/v1/inline.js'
+      script.async = true
+      document.head.appendChild(script)
+    }
   }, [])
 
-  const handlePayment = async () => {
+  const handlePayment = () => {
     if (!amount || isNaN(amount) || Number(amount) < 100) {
       setMessage('Enter a valid amount (min ₦100)')
+      return
+    }
+
+    if (!window.PaystackPop) {
+      setMessage('Payment is still loading. Please wait 2 seconds and try again.')
       return
     }
 
     setMessage('')
     setPaying(true)
 
-    // Make sure Paystack is loaded
-    const ready = await loadPaystack()
-    if (!ready || !window.PaystackPop) {
-      setMessage('Payment system failed to load. Please refresh the page and try again.')
-      setPaying(false)
-      return
-    }
+    const profileId = profile.id
+    const profileEmail = profile.email
+    const payAmount = Number(amount)
+    const supabaseClient = supabase
 
-    try {
-      const handler = window.PaystackPop.setup({
-        key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
-        email: profile.email,
-        amount: Number(amount) * 100,
+    function onSuccess(response) {
+      supabaseClient.from('transactions').insert({
+        user_id: profileId,
+        reference: response.reference,
+        amount: payAmount,
         currency: 'NGN',
-        channels: ['card', 'bank', 'ussd', 'bank_transfer', 'opay', 'mobile_money'],
-        ref: Date.now().toString() + '-wallet-' + profile.id.substring(0, 8),
-        callback: async (response) => {
-          // Verify payment
-          const verifyRes = await fetch('/api/paystack/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: response.reference }),
-          })
-          const verifyData = await verifyRes.json()
-
-          if (verifyData.data?.status === 'success') {
-            const { error } = await supabase.from('transactions').insert({
-              user_id: profile.id,
-              reference: response.reference,
-              amount: Number(amount),
-              currency: 'NGN',
-              status: 'success',
-              purpose: 'wallet_topup',
-              paystack_data: response,
-            })
-            if (!error) {
-              setTransactions(prev => [{
-                reference: response.reference,
-                amount: Number(amount),
-                status: 'success',
-                created_at: new Date().toISOString(),
-                purpose: 'wallet_topup',
-              }, ...prev])
-              setMessage('✓ Payment successful! ₦' + Number(amount).toLocaleString() + ' added to your wallet.')
-              setAmount('')
-            }
-          } else {
-            setMessage('Payment could not be verified. Contact support if money was deducted.')
-          }
-          setPaying(false)
-        },
-        onClose: () => {
-          setPaying(false)
-          setMessage('')
-        },
+        status: 'success',
+        purpose: 'wallet_topup',
+        paystack_data: response,
+      }).then(({ error }) => {
+        if (!error) {
+          setTransactions(prev => [{
+            reference: response.reference,
+            amount: payAmount,
+            status: 'success',
+            created_at: new Date().toISOString(),
+            purpose: 'wallet_topup',
+          }, ...prev])
+          setMessage('✓ Payment successful! ₦' + payAmount.toLocaleString() + ' added to your wallet.')
+          setAmount('')
+        }
+        setPaying(false)
       })
-      handler.openIframe()
-    } catch (err) {
-      setMessage('Error opening payment: ' + err.message)
-      setPaying(false)
     }
+
+    function onClose() {
+      setPaying(false)
+      setMessage('')
+    }
+
+    const handler = window.PaystackPop.setup({
+      key: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY,
+      email: profileEmail,
+      amount: payAmount * 100,
+      currency: 'NGN',
+      channels: ['card', 'bank', 'ussd', 'bank_transfer', 'opay', 'mobile_money'],
+      ref: new Date().getTime().toString() + '-engedi',
+      callback: onSuccess,
+      onClose: onClose,
+    })
+
+    handler.openIframe()
   }
 
   const totalDeposited = transactions
@@ -183,16 +161,12 @@ export default function WalletPage() {
               disabled={paying}
               style={{ background: paying ? '#EEE6DA' : '#1A1A1A', color: paying ? '#999999' : '#FFFFFF', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: paying ? 'not-allowed' : 'pointer', flexShrink: 0 }}
             >
-              {paying ? 'Opening...' : 'Pay Now'}
+              {paying ? 'Processing...' : 'Pay Now'}
             </button>
           </div>
 
-          {!paystackReady && (
-            <p style={{ color: '#999999', fontSize: '12px', margin: '0 0 8px' }}>⏳ Loading payment system...</p>
-          )}
-
           {message && (
-            <p style={{ color: message.includes('✓') ? '#2ecc71' : message.includes('failed') || message.includes('Error') ? '#c0392b' : '#666666', fontSize: '13px', marginTop: '8px', fontWeight: '600', lineHeight: '1.5' }}>
+            <p style={{ color: message.includes('✓') ? '#2ecc71' : message.includes('failed') || message.includes('Error') ? '#c0392b' : '#8B5E3C', fontSize: '13px', marginTop: '8px', fontWeight: '600', lineHeight: '1.5' }}>
               {message}
             </p>
           )}
@@ -212,7 +186,6 @@ export default function WalletPage() {
                   </p>
                   <p style={{ margin: 0, fontSize: '12px', color: '#999999' }}>
                     {new Date(tx.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    {tx.reference && ` · ${tx.reference.substring(0, 20)}...`}
                   </p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
