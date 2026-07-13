@@ -13,6 +13,8 @@
   --clay-contrast: #FBF3EA;
   --oasis: #3F5C43;
   --oasis-soft: #E1E8DD;
+  --danger: #A63B2F;
+  --danger-soft: #F3E1DC;
   --ink: #1B1815;
   --ink-text: #F3EEE4;
   --ink-muted: #A79E90;
@@ -32,6 +34,8 @@
     --clay-contrast: #15120E;
     --oasis: #86A98B;
     --oasis-soft: #22291F;
+    --danger: #E2695F;
+    --danger-soft: #2E1712;
     --ink: #0F0C09;
     --ink-text: #F1EAE0;
     --ink-muted: #8C806F;
@@ -51,6 +55,8 @@
   --clay-contrast: #15120E;
   --oasis: #86A98B;
   --oasis-soft: #22291F;
+  --danger: #E2695F;
+  --danger-soft: #2E1712;
   --ink: #0F0C09;
   --ink-text: #F1EAE0;
   --ink-muted: #8C806F;
@@ -69,6 +75,8 @@
   --clay-contrast: #FBF3EA;
   --oasis: #3F5C43;
   --oasis-soft: #E1E8DD;
+  --danger: #A63B2F;
+  --danger-soft: #F3E1DC;
   --ink: #1B1815;
   --ink-text: #F3EEE4;
   --ink-muted: #A79E90;
@@ -87,6 +95,8 @@
   --color-clay-contrast: var(--clay-contrast);
   --color-oasis: var(--oasis);
   --color-oasis-soft: var(--oasis-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --color-ink: var(--ink);
   --color-ink-text: var(--ink-text);
   --color-ink-muted: var(--ink-muted);
