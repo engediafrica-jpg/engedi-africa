@@ -19,6 +19,12 @@ export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('users')
   const [training, setTraining] = useState([])
   const [trainingLoading, setTrainingLoading] = useState(false)
+  const [admin, setAdmin] = useState(null)
+  const [disputes, setDisputes] = useState([])
+  const [disputesLoading, setDisputesLoading] = useState(false)
+  const [resolvingId, setResolvingId] = useState(null)
+  const [resolutionNotes, setResolutionNotes] = useState({})
+  const [disputeMessage, setDisputeMessage] = useState('')
 
   useEffect(() => {
     const getData = async () => {
@@ -26,6 +32,7 @@ export default function AdminPage() {
       if (!sessionData.session) { router.push('/login'); return }
       const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       if (!me?.is_admin) { router.push('/dashboard'); return }
+      setAdmin(me)
       const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
       setUsers(data || [])
       setLoading(false)
@@ -42,6 +49,94 @@ export default function AdminPage() {
       .order('created_at', { ascending: false })
     setTraining(data || [])
     setTrainingLoading(false)
+  }
+
+  const loadDisputes = async () => {
+    setDisputesLoading(true)
+    const { data } = await supabase
+      .from('disputes')
+      .select(`*,
+        raiser:profiles!disputes_raised_by_fkey(full_name, email),
+        order:orders(id, total_price, payment_reference, payout_amount, buyer_id, supplier_id,
+          product:products(name),
+          buyer:profiles!orders_buyer_id_fkey(full_name),
+          supplier:profiles!orders_supplier_id_fkey(full_name, paystack_recipient_code)),
+        booking:bookings(id, job_title, quoted_price, payment_reference, payout_amount, project_owner_id, provider_id,
+          project_owner:profiles!bookings_project_owner_id_fkey(full_name),
+          provider:profiles!bookings_provider_id_fkey(full_name, paystack_recipient_code))`)
+      .eq('status', 'open')
+      .order('created_at', { ascending: false })
+    if (data) setDisputes(data)
+    setDisputesLoading(false)
+  }
+
+  const handleResolveDispute = async (dispute, action) => {
+    setResolvingId(dispute.id)
+    setDisputeMessage('')
+    const note = resolutionNotes[dispute.id] || ''
+    const item = dispute.order || dispute.booking
+    const isOrder = !!dispute.order
+    const table = isOrder ? 'orders' : 'bookings'
+    const recipient = isOrder ? item?.supplier : item?.provider
+    const payoutAmount = item?.payout_amount
+
+    try {
+      if (action === 'release') {
+        if (!recipient?.paystack_recipient_code || !payoutAmount) {
+          setDisputeMessage('Missing recipient bank details or payout amount — cannot release.')
+          setResolvingId(null)
+          return
+        }
+        const transferRes = await fetch('/api/paystack/transfer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: payoutAmount,
+            recipient_code: recipient.paystack_recipient_code,
+            reason: `EnGedi dispute resolution payout for ${table} ${item.id.substring(0, 8)}`,
+            reference: Date.now().toString() + '-disputepayout-' + item.id.substring(0, 8),
+          }),
+        })
+        const transferData = await transferRes.json()
+        await supabase.from(table).update({
+          status: isOrder ? 'delivered' : 'completed',
+          payment_status: 'released',
+          escrow_released: true,
+          dispute_raised: false,
+          confirmed_at: new Date().toISOString(),
+          ...(transferData?.data?.transfer_code ? { payout_reference: transferData.data.transfer_code } : {}),
+        }).eq('id', item.id)
+      } else if (action === 'refund') {
+        if (!item?.payment_reference) {
+          setDisputeMessage('No payment reference on this record — cannot refund.')
+          setResolvingId(null)
+          return
+        }
+        await fetch('/api/paystack/refund', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reference: item.payment_reference }),
+        })
+        await supabase.from(table).update({
+          status: isOrder ? 'cancelled' : 'declined',
+          payment_status: 'refunded',
+          dispute_raised: false,
+        }).eq('id', item.id)
+      }
+
+      await supabase.from('disputes').update({
+        status: 'resolved',
+        resolution: note || (action === 'release' ? 'Released to provider' : action === 'refund' ? 'Refunded to client' : 'Resolved without payment action'),
+        resolved_by: admin.id,
+        resolved_at: new Date().toISOString(),
+      }).eq('id', dispute.id)
+
+      setDisputes(disputes.filter(d => d.id !== dispute.id))
+      setDisputeMessage('Dispute resolved.')
+    } catch (error) {
+      setDisputeMessage('Error: ' + error.message)
+    }
+    setResolvingId(null)
   }
 
   const loadDocuments = async (user) => {
@@ -127,6 +222,7 @@ export default function AdminPage() {
           {[
             { key: 'users', label: `All Users (${users.length})` },
             { key: 'pending', label: `Pending Review (${pendingVerification.length})` },
+            { key: 'disputes', label: `Disputes${disputes.length ? ` (${disputes.length})` : ''}` },
             { key: 'training', label: 'Training Progress' },
           ].map(tab => (
             <button
@@ -134,6 +230,7 @@ export default function AdminPage() {
               onClick={() => {
                 setActiveTab(tab.key)
                 if (tab.key === 'training' && training.length === 0) loadTraining()
+                if (tab.key === 'disputes') loadDisputes()
               }}
               style={{ padding: '10px 20px', borderRadius: '8px', border: `1.5px solid ${activeTab === tab.key ? '#1A1A1A' : '#EEE6DA'}`, background: activeTab === tab.key ? '#1A1A1A' : '#FFFFFF', color: activeTab === tab.key ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
             >
@@ -143,6 +240,76 @@ export default function AdminPage() {
         </div>
 
         {message && <p style={{ color: '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
+
+        {/* Disputes tab */}
+        {activeTab === 'disputes' && (
+          <div>
+            {disputeMessage && <p style={{ color: disputeMessage.includes('Error') || disputeMessage.includes('Missing') || disputeMessage.includes('No payment') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{disputeMessage}</p>}
+            {disputesLoading ? (
+              <p style={{ color: '#666666' }}>Loading disputes...</p>
+            ) : disputes.length === 0 ? (
+              <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
+                <p style={{ color: '#999999', fontSize: '15px', margin: 0 }}>No open disputes.</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {disputes.map(dispute => {
+                  const item = dispute.order || dispute.booking
+                  const isOrder = !!dispute.order
+                  const title = isOrder ? (item?.product?.name || 'Order') : (item?.job_title || 'Booking')
+                  const clientName = isOrder ? item?.buyer?.full_name : item?.project_owner?.full_name
+                  const providerName = isOrder ? item?.supplier?.full_name : item?.provider?.full_name
+                  const amount = isOrder ? item?.total_price : item?.quoted_price
+                  return (
+                    <div key={dispute.id} style={{ background: '#FFFFFF', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ background: '#fde8e8', border: '1px solid #c0392b', color: '#c0392b', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' }}>{isOrder ? 'ORDER' : 'BOOKING'}</span>
+                            <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>{title}</p>
+                          </div>
+                          <p style={{ margin: '0 0 2px', fontSize: '13px', color: '#666666' }}>Raised by {dispute.raiser?.full_name || 'Unknown'} · {new Date(dispute.created_at).toLocaleDateString()}</p>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>Client: {clientName || '—'} · Provider: {providerName || '—'} · ₦{Number(amount || 0).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      <div style={{ background: '#F9F6F1', borderRadius: '8px', padding: '14px', marginBottom: '14px' }}>
+                        <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#999999', fontWeight: '600', textTransform: 'uppercase' }}>Reason</p>
+                        <p style={{ margin: 0, fontSize: '14px', color: '#1A1A1A' }}>{dispute.reason}</p>
+                      </div>
+
+                      <div style={{ marginBottom: '14px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Resolution note (optional)</label>
+                        <input
+                          type="text"
+                          value={resolutionNotes[dispute.id] || ''}
+                          onChange={e => setResolutionNotes({ ...resolutionNotes, [dispute.id]: e.target.value })}
+                          placeholder="What was decided and why..."
+                          style={{ width: '100%', padding: '10px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                        <button onClick={() => handleResolveDispute(dispute, 'release')} disabled={resolvingId === dispute.id}
+                          style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                          Release to Provider
+                        </button>
+                        <button onClick={() => handleResolveDispute(dispute, 'refund')} disabled={resolvingId === dispute.id}
+                          style={{ background: '#6366F1', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                          Refund Client
+                        </button>
+                        <button onClick={() => handleResolveDispute(dispute, 'none')} disabled={resolvingId === dispute.id}
+                          style={{ background: '#F5EFE6', color: '#8B5E3C', border: '1px solid #8B5E3C', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                          {resolvingId === dispute.id ? 'Working...' : 'Mark Resolved (no payment action)'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Training tab */}
         {activeTab === 'training' && (

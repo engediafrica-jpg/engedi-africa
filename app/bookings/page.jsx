@@ -8,6 +8,7 @@ const statusColors = {
   requested: { bg: '#FFF8F0', border: '#8B5E3C', color: '#8B5E3C' },
   countered: { bg: '#FFF8F0', border: '#F59E0B', color: '#F59E0B' },
   declined: { bg: '#fde8e8', border: '#c0392b', color: '#c0392b' },
+  cancelled: { bg: '#F9F6F1', border: '#999999', color: '#999999' },
   accepted: { bg: '#EEF2FF', border: '#6366F1', color: '#6366F1' },
   paid: { bg: '#EEF2FF', border: '#6366F1', color: '#6366F1' },
   completed_by_provider: { bg: '#FFF8F0', border: '#F59E0B', color: '#F59E0B' },
@@ -19,6 +20,7 @@ const statusLabels = {
   requested: 'Awaiting response',
   countered: 'Counter-offer',
   declined: 'Declined',
+  cancelled: 'Cancelled',
   accepted: 'Accepted — awaiting payment',
   paid: 'Paid — in escrow',
   completed_by_provider: 'Marked done',
@@ -140,6 +142,15 @@ export default function BookingsPage() {
     setRespondBooking(null)
     setMessage('Response sent!')
     setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handleCancelBooking = async (booking) => {
+    setUpdating(booking.id)
+    const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id)
+    if (error) { setMessage('Error: ' + error.message); setUpdating(null); return }
+    setBookings(bookings.map(b => b.id === booking.id ? { ...b, status: 'cancelled' } : b))
+    await notify(booking.provider_id, 'booking', 'Booking request cancelled', `${profile.full_name} cancelled the request for "${booking.job_title}"`)
+    setUpdating(null)
   }
 
   const handleOwnerAcceptCounter = async (booking) => {
@@ -538,6 +549,12 @@ export default function BookingsPage() {
                   {/* Requesting (owner) actions */}
                   {activeTab === 'requesting' && (
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {booking.status === 'requested' && (
+                        <button onClick={() => handleCancelBooking(booking)} disabled={updating === booking.id}
+                          style={{ background: '#FFFFFF', color: '#666666', border: '1.5px solid #EEE6DA', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                          {updating === booking.id ? 'Cancelling...' : 'Cancel Request'}
+                        </button>
+                      )}
                       {booking.status === 'countered' && (
                         <>
                           <button onClick={() => handleOwnerAcceptCounter(booking)} disabled={updating === booking.id}
