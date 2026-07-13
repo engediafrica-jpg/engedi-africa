@@ -1,12 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
-export default function EquipmentProviderProfilePage({ params }) {
+export default function EquipmentProviderProfilePage() {
   const supabase = createClient()
   const router = useRouter()
+  const params = useParams()
   const [profile, setProfile] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])

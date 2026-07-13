@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -12,9 +12,10 @@ const stageStatusColors = {
 }
 const projectStatusOptions = ['planning', 'active', 'on_hold', 'completed']
 
-export default function ProjectDetailPage({ params }) {
+export default function ProjectDetailPage() {
   const supabase = createClient()
   const router = useRouter()
+  const params = useParams()
   const [project, setProject] = useState(null)
   const [stages, setStages] = useState([])
   const [members, setMembers] = useState([])
