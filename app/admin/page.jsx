@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
+import Input from '@/components/Input'
 
 const TOTAL_MODULES = 5
 
@@ -205,37 +209,36 @@ export default function AdminPage() {
 
   const pendingVerification = users.filter(u => u.documents_submitted && u.verification_status === 'pending')
 
+  const verificationTone = (status) => status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'pending'
+
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading admin panel...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading admin panel...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '4px' }}>Admin Panel</h1>
-        <p style={{ color: '#666666', fontSize: '14px', marginBottom: '32px' }}>{users.length} total users · {pendingVerification.length} pending verification</p>
+      <div className="mx-auto max-w-[1000px] px-6 py-10">
+        <h1 className="mb-1 text-[24px] font-bold text-text">Admin Panel</h1>
+        <p className="mb-8 text-[14px] text-text-muted">{users.length} total users · {pendingVerification.length} pending verification</p>
 
         {openDisputeCount > 0 && (
           <button
             onClick={() => { setActiveTab('disputes'); if (disputes.length === 0) loadDisputes() }}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: '#fde8e8', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', cursor: 'pointer' }}
+            className="mb-6 flex w-full items-center justify-between border border-danger bg-danger-soft px-5 py-4 text-left"
           >
-            <p style={{ margin: 0, fontWeight: '700', color: '#c0392b', fontSize: '14px' }}>
-              ⚠️ {openDisputeCount} open {openDisputeCount === 1 ? 'dispute needs' : 'disputes need'} review
+            <p className="m-0 text-[14px] font-bold text-danger">
+              {openDisputeCount} open {openDisputeCount === 1 ? 'dispute needs' : 'disputes need'} review
             </p>
-            <span style={{ color: '#c0392b', fontSize: '13px', fontWeight: '700' }}>Review →</span>
+            <span className="text-[13px] font-bold text-danger">Review →</span>
           </button>
         )}
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="mb-6 flex flex-wrap gap-2">
           {[
             { key: 'users', label: `All Users (${users.length})` },
             { key: 'pending', label: `Pending Review (${pendingVerification.length})` },
@@ -249,27 +252,27 @@ export default function AdminPage() {
                 if (tab.key === 'training' && training.length === 0) loadTraining()
                 if (tab.key === 'disputes') loadDisputes()
               }}
-              style={{ padding: '10px 20px', borderRadius: '8px', border: `1.5px solid ${activeTab === tab.key ? '#1A1A1A' : '#EEE6DA'}`, background: activeTab === tab.key ? '#1A1A1A' : '#FFFFFF', color: activeTab === tab.key ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+              className={`border px-5 py-2.5 text-[13px] font-bold ${activeTab === tab.key ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}
             >
               {tab.label}
             </button>
           ))}
         </div>
 
-        {message && <p style={{ color: '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
+        {message && <p className="mb-4 text-[13px] font-semibold text-oasis">{message}</p>}
 
         {/* Disputes tab */}
         {activeTab === 'disputes' && (
           <div>
-            {disputeMessage && <p style={{ color: disputeMessage.includes('Error') || disputeMessage.includes('Missing') || disputeMessage.includes('No payment') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{disputeMessage}</p>}
+            {disputeMessage && <p className={`mb-4 text-[13px] font-semibold ${disputeMessage.includes('Error') || disputeMessage.includes('Missing') || disputeMessage.includes('No payment') ? 'text-danger' : 'text-oasis'}`}>{disputeMessage}</p>}
             {disputesLoading ? (
-              <p style={{ color: '#666666' }}>Loading disputes...</p>
+              <p className="text-text-muted">Loading disputes...</p>
             ) : disputes.length === 0 ? (
-              <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#999999', fontSize: '15px', margin: 0 }}>No open disputes.</p>
+              <div className="border border-line bg-surface-raised p-10 text-center">
+                <p className="m-0 text-[15px] text-text-muted">No open disputes.</p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="flex flex-col gap-3">
                 {disputes.map(dispute => {
                   const item = dispute.order || dispute.booking
                   const isOrder = !!dispute.order
@@ -278,47 +281,43 @@ export default function AdminPage() {
                   const providerName = isOrder ? item?.supplier?.full_name : item?.provider?.full_name
                   const amount = isOrder ? item?.total_price : item?.quoted_price
                   return (
-                    <div key={dispute.id} style={{ background: '#FFFFFF', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '12px' }}>
+                    <div key={dispute.id} className="ticks border border-danger bg-surface-raised p-5">
+                      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                         <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                            <span style={{ background: '#fde8e8', border: '1px solid #c0392b', color: '#c0392b', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' }}>{isOrder ? 'ORDER' : 'BOOKING'}</span>
-                            <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>{title}</p>
+                          <div className="mb-1 flex items-center gap-2">
+                            <Badge tone="danger">{isOrder ? 'Order' : 'Booking'}</Badge>
+                            <p className="m-0 text-[15px] font-bold text-text">{title}</p>
                           </div>
-                          <p style={{ margin: '0 0 2px', fontSize: '13px', color: '#666666' }}>Raised by {dispute.raiser?.full_name || 'Unknown'} · {new Date(dispute.created_at).toLocaleDateString()}</p>
-                          <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>Client: {clientName || '—'} · Provider: {providerName || '—'} · ₦{Number(amount || 0).toLocaleString()}</p>
+                          <p className="m-0 mb-0.5 text-[13px] text-text-muted">Raised by {dispute.raiser?.full_name || 'Unknown'} · {new Date(dispute.created_at).toLocaleDateString()}</p>
+                          <p className="m-0 text-[13px] text-text-muted">Client: {clientName || '—'} · Provider: {providerName || '—'} · ₦{Number(amount || 0).toLocaleString()}</p>
                         </div>
                       </div>
 
-                      <div style={{ background: '#F9F6F1', borderRadius: '8px', padding: '14px', marginBottom: '14px' }}>
-                        <p style={{ margin: '0 0 4px', fontSize: '11px', color: '#999999', fontWeight: '600', textTransform: 'uppercase' }}>Reason</p>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#1A1A1A' }}>{dispute.reason}</p>
+                      <div className="mb-4 border border-line bg-surface-sunk p-3.5">
+                        <p className="m-0 mb-1 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Reason</p>
+                        <p className="m-0 text-[14px] text-text">{dispute.reason}</p>
                       </div>
 
-                      <div style={{ marginBottom: '14px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Resolution note (optional)</label>
-                        <input
+                      <div className="mb-4">
+                        <Input
+                          label="Resolution note (optional)"
                           type="text"
                           value={resolutionNotes[dispute.id] || ''}
                           onChange={e => setResolutionNotes({ ...resolutionNotes, [dispute.id]: e.target.value })}
                           placeholder="What was decided and why..."
-                          style={{ width: '100%', padding: '10px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                         />
                       </div>
 
-                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        <button onClick={() => handleResolveDispute(dispute, 'release')} disabled={resolvingId === dispute.id}
-                          style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                      <div className="flex flex-wrap gap-2.5">
+                        <Button className="border-oasis bg-oasis text-clay-contrast hover:bg-oasis text-[13px]" disabled={resolvingId === dispute.id} onClick={() => handleResolveDispute(dispute, 'release')}>
                           Release to Provider
-                        </button>
-                        <button onClick={() => handleResolveDispute(dispute, 'refund')} disabled={resolvingId === dispute.id}
-                          style={{ background: '#6366F1', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                        </Button>
+                        <Button className="text-[13px]" disabled={resolvingId === dispute.id} onClick={() => handleResolveDispute(dispute, 'refund')}>
                           Refund Client
-                        </button>
-                        <button onClick={() => handleResolveDispute(dispute, 'none')} disabled={resolvingId === dispute.id}
-                          style={{ background: '#F5EFE6', color: '#8B5E3C', border: '1px solid #8B5E3C', padding: '10px 18px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '13px' }}>
+                        </Button>
+                        <Button variant="outline" className="text-[13px]" disabled={resolvingId === dispute.id} onClick={() => handleResolveDispute(dispute, 'none')}>
                           {resolvingId === dispute.id ? 'Working...' : 'Mark Resolved (no payment action)'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )
@@ -332,38 +331,38 @@ export default function AdminPage() {
         {activeTab === 'training' && (
           <div>
             {trainingLoading ? (
-              <p style={{ color: '#666666' }}>Loading training data...</p>
+              <p className="text-text-muted">Loading training data...</p>
             ) : Object.keys(trainingByUser).length === 0 ? (
-              <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#999999', fontSize: '15px', margin: 0 }}>No artisans have completed any training modules yet.</p>
+              <div className="border border-line bg-surface-raised p-10 text-center">
+                <p className="m-0 text-[15px] text-text-muted">No artisans have completed any training modules yet.</p>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div className="flex flex-col gap-3">
                 {Object.values(trainingByUser).map(({ user, modules }) => {
                   const completed = modules.length
                   const allDone = completed >= TOTAL_MODULES
                   return (
-                    <div key={modules[0].user_id} style={{ background: '#FFFFFF', border: `1.5px solid ${allDone ? '#2ecc71' : '#EEE6DA'}`, borderRadius: '12px', padding: '20px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#F5EFE6', border: '2px solid #8B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#8B5E3C', fontSize: '16px', overflow: 'hidden', flexShrink: 0 }}>
+                    <div key={modules[0].user_id} className={`border p-5 ${allDone ? 'border-oasis' : 'border-line'} bg-surface-raised`}>
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-clay bg-surface-sunk font-display text-[16px] font-bold text-clay">
                             {user?.avatar_url
-                              ? <img src={user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                              ? <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
                               : user?.full_name?.charAt(0)?.toUpperCase() || '?'
                             }
                           </div>
                           <div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                              <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>{user?.full_name}</p>
-                              {allDone && <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' }}>🏆 Certified</span>}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="m-0 text-[15px] font-bold text-text">{user?.full_name}</p>
+                              {allDone && <Badge tone="success">Certified</Badge>}
                             </div>
-                            <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#666666' }}>{user?.email}</p>
+                            <p className="m-0.5 mt-0.5 text-[13px] text-text-muted">{user?.email}</p>
                           </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <p style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '800', color: '#1A1A1A' }}>{completed}/{TOTAL_MODULES} modules</p>
-                          <div style={{ background: '#EEE6DA', borderRadius: '20px', height: '6px', width: '120px', overflow: 'hidden' }}>
-                            <div style={{ background: allDone ? '#2ecc71' : '#8B5E3C', height: '100%', borderRadius: '20px', width: `${(completed / TOTAL_MODULES) * 100}%` }}></div>
+                        <div className="text-right">
+                          <p className="m-0 mb-1 font-mono text-[16px] font-bold tabular-nums text-text">{completed}/{TOTAL_MODULES} modules</p>
+                          <div className="h-1.5 w-[120px] overflow-hidden bg-line-strong">
+                            <div className={`h-full ${allDone ? 'bg-oasis' : 'bg-clay'}`} style={{ width: `${(completed / TOTAL_MODULES) * 100}%` }}></div>
                           </div>
                         </div>
                       </div>
@@ -377,67 +376,53 @@ export default function AdminPage() {
 
         {/* Users list */}
         {(activeTab === 'users' || activeTab === 'pending') && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="flex flex-col gap-3">
             {(activeTab === 'pending' ? pendingVerification : users).map(user => (
-              <div key={user.id} style={{ background: '#FFFFFF', border: `1.5px solid ${selected?.id === user.id ? '#8B5E3C' : '#EEE6DA'}`, borderRadius: '12px', padding: '20px' }}>
+              <div key={user.id} className={`border p-5 ${selected?.id === user.id ? 'border-clay' : 'border-line'} bg-surface-raised`}>
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                  <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                    <div style={{ position: 'relative', flexShrink: 0 }}>
-                      <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#F5EFE6', border: `2px solid ${user.is_verified ? '#2ecc71' : '#8B5E3C'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#8B5E3C', fontSize: '18px', overflow: 'hidden' }}>
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="flex items-center gap-3.5">
+                    <div className="relative shrink-0">
+                      <div className={`flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 ${user.is_verified ? 'border-oasis' : 'border-clay'} bg-surface-sunk font-display text-[18px] font-bold text-clay`}>
                         {user.avatar_url
-                          ? <img src={user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ? <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
                           : user.full_name?.charAt(0)?.toUpperCase() || '?'
                         }
                       </div>
                       {user.is_verified && (
-                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderRadius: '50%', background: '#2ecc71', border: '2px solid #FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          <span style={{ color: '#FFFFFF', fontSize: '9px', fontWeight: '800' }}>✓</span>
+                        <div className="absolute bottom-0 right-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-surface-raised bg-oasis">
+                          <span className="text-[9px] font-bold text-clay-contrast">✓</span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                        <p style={{ margin: 0, fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>{user.full_name || 'No name'}</p>
-                        {user.is_admin && <span style={{ background: '#1A1A1A', color: '#FFFFFF', fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' }}>ADMIN</span>}
-                        {user.is_verified && <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '10px', fontWeight: '700', padding: '2px 8px', borderRadius: '20px' }}>✓ VERIFIED</span>}
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <p className="m-0 text-[15px] font-bold text-text">{user.full_name || 'No name'}</p>
+                        {user.is_admin && <Badge tone="neutral">Admin</Badge>}
+                        {user.is_verified && <Badge tone="success">Verified</Badge>}
                       </div>
-                      <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#666666' }}>{user.email}</p>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                        <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>
-                          {roleLabel[user.role] || user.role || 'No role'}
-                        </span>
-                        <span style={{
-                          background: user.verification_status === 'approved' ? '#e8f8f0' : user.verification_status === 'rejected' ? '#fde8e8' : '#FFF8F0',
-                          border: `1px solid ${user.verification_status === 'approved' ? '#2ecc71' : user.verification_status === 'rejected' ? '#c0392b' : '#8B5E3C'}`,
-                          color: user.verification_status === 'approved' ? '#27ae60' : user.verification_status === 'rejected' ? '#c0392b' : '#8B5E3C',
-                          fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px'
-                        }}>
-                          {user.verification_status || 'pending'}
-                        </span>
+                      <p className="m-0 mb-2 text-[13px] text-text-muted">{user.email}</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        <Badge tone="pending">{roleLabel[user.role] || user.role || 'No role'}</Badge>
+                        <Badge tone={verificationTone(user.verification_status)}>{user.verification_status || 'pending'}</Badge>
                         {user.documents_submitted && (
-                          <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>
-                            Docs Submitted
-                          </span>
+                          <Badge tone="success">Docs Submitted</Badge>
                         )}
                       </div>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => handleSelect(user)}
-                    style={{ background: selected?.id === user.id ? '#1A1A1A' : '#F5EFE6', border: `1px solid ${selected?.id === user.id ? '#1A1A1A' : '#8B5E3C'}`, color: selected?.id === user.id ? '#FFFFFF' : '#8B5E3C', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}
-                  >
+                  <Button variant={selected?.id === user.id ? 'solid' : 'outline'} className="text-[13px]" onClick={() => handleSelect(user)}>
                     {selected?.id === user.id ? 'Close' : 'Review'}
-                  </button>
+                  </Button>
                 </div>
 
                 {/* Review panel */}
                 {selected?.id === user.id && (
-                  <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #EEE6DA' }}>
+                  <div className="mt-6 border-t border-line pt-6">
 
                     {/* User details */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '20px' }}>
+                    <div className="mb-5 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5">
                       {[
                         { label: 'Phone', value: user.phone },
                         { label: 'City', value: user.city },
@@ -448,98 +433,94 @@ export default function AdminPage() {
                         { label: 'License Number', value: user.professional_license_number },
                         { label: 'CAC Number', value: user.cac_number },
                       ].filter(f => f.value).map(field => (
-                        <div key={field.label} style={{ background: '#F9F6F1', padding: '10px 12px', borderRadius: '8px' }}>
-                          <p style={{ margin: '0 0 2px', fontSize: '11px', color: '#999999', fontWeight: '600', textTransform: 'uppercase' }}>{field.label}</p>
-                          <p style={{ margin: 0, fontSize: '13px', color: '#1A1A1A', fontWeight: '600' }}>{field.value}</p>
+                        <div key={field.label} className="border border-line bg-surface-sunk px-3 py-2.5">
+                          <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">{field.label}</p>
+                          <p className="m-0 text-[13px] font-semibold text-text">{field.value}</p>
                         </div>
                       ))}
                     </div>
 
                     {/* Bio */}
                     {user.bio && (
-                      <div style={{ background: '#F9F6F1', padding: '16px', borderRadius: '8px', marginBottom: '20px' }}>
-                        <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#999999', fontWeight: '600', textTransform: 'uppercase' }}>Bio</p>
-                        <p style={{ margin: 0, fontSize: '14px', color: '#1A1A1A', lineHeight: '1.6' }}>{user.bio}</p>
+                      <div className="mb-5 border border-line bg-surface-sunk p-4">
+                        <p className="m-0 mb-1.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Bio</p>
+                        <p className="m-0 text-[14px] leading-relaxed text-text">{user.bio}</p>
                       </div>
                     )}
 
                     {/* Documents */}
-                    <div style={{ marginBottom: '20px' }}>
-                      <p style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A', marginBottom: '12px' }}>Uploaded Documents</p>
+                    <div className="mb-5">
+                      <p className="mb-3 text-[14px] font-bold text-text">Uploaded Documents</p>
                       {loadingDocs ? (
-                        <p style={{ color: '#999999', fontSize: '13px' }}>Loading documents...</p>
+                        <p className="text-[13px] text-text-muted">Loading documents...</p>
                       ) : (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <div className="flex flex-col gap-2">
                           {docUrls.id ? (
-                            <a href={docUrls.id} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F9F6F1', padding: '14px', borderRadius: '10px', textDecoration: 'none', border: '1px solid #EEE6DA' }}>
-                              <span style={{ fontSize: '20px' }}>🪪</span>
+                            <a href={docUrls.id} target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-line bg-surface-sunk p-3.5 no-underline">
                               <div>
-                                <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>Government ID</p>
-                                <p style={{ margin: 0, fontSize: '12px', color: '#8B5E3C', fontWeight: '600' }}>Click to view →</p>
+                                <p className="m-0 mb-0.5 text-[14px] font-bold text-text">Government ID</p>
+                                <p className="m-0 text-[12px] font-semibold text-clay">Click to view →</p>
                               </div>
                             </a>
                           ) : (
-                            <div style={{ background: '#F9F6F1', padding: '14px', borderRadius: '10px', border: '1px solid #EEE6DA' }}>
-                              <p style={{ margin: 0, fontSize: '13px', color: '#999999' }}>🪪 No government ID uploaded</p>
+                            <div className="border border-line bg-surface-sunk p-3.5">
+                              <p className="m-0 text-[13px] text-text-muted">No government ID uploaded</p>
                             </div>
                           )}
 
                           {user.cac_document_url && (
                             docUrls.cac ? (
-                              <a href={docUrls.cac} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F9F6F1', padding: '14px', borderRadius: '10px', textDecoration: 'none', border: '1px solid #EEE6DA' }}>
-                                <span style={{ fontSize: '20px' }}>🏢</span>
+                              <a href={docUrls.cac} target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-line bg-surface-sunk p-3.5 no-underline">
                                 <div>
-                                  <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>CAC Certificate</p>
-                                  <p style={{ margin: 0, fontSize: '12px', color: '#8B5E3C', fontWeight: '600' }}>Click to view →</p>
+                                  <p className="m-0 mb-0.5 text-[14px] font-bold text-text">CAC Certificate</p>
+                                  <p className="m-0 text-[12px] font-semibold text-clay">Click to view →</p>
                                 </div>
                               </a>
                             ) : (
-                              <div style={{ background: '#F9F6F1', padding: '14px', borderRadius: '10px', border: '1px solid #EEE6DA' }}>
-                                <p style={{ margin: 0, fontSize: '13px', color: '#999999' }}>🏢 CAC Certificate uploaded</p>
+                              <div className="border border-line bg-surface-sunk p-3.5">
+                                <p className="m-0 text-[13px] text-text-muted">CAC Certificate uploaded</p>
                               </div>
                             )
                           )}
 
                           {user.professional_license_url && (
                             docUrls.license ? (
-                              <a href={docUrls.license} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#F9F6F1', padding: '14px', borderRadius: '10px', textDecoration: 'none', border: '1px solid #EEE6DA' }}>
-                                <span style={{ fontSize: '20px' }}>📋</span>
+                              <a href={docUrls.license} target="_blank" rel="noreferrer" className="flex items-center gap-3 border border-line bg-surface-sunk p-3.5 no-underline">
                                 <div>
-                                  <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>Professional License</p>
-                                  <p style={{ margin: 0, fontSize: '12px', color: '#8B5E3C', fontWeight: '600' }}>Click to view →</p>
+                                  <p className="m-0 mb-0.5 text-[14px] font-bold text-text">Professional License</p>
+                                  <p className="m-0 text-[12px] font-semibold text-clay">Click to view →</p>
                                 </div>
                               </a>
                             ) : (
-                              <div style={{ background: '#F9F6F1', padding: '14px', borderRadius: '10px', border: '1px solid #EEE6DA' }}>
-                                <p style={{ margin: 0, fontSize: '13px', color: '#999999' }}>📋 Professional License uploaded</p>
+                              <div className="border border-line bg-surface-sunk p-3.5">
+                                <p className="m-0 text-[13px] text-text-muted">Professional License uploaded</p>
                               </div>
                             )
                           )}
 
                           {!user.id_document_url && !user.cac_document_url && !user.professional_license_url && (
-                            <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>No documents uploaded yet</p>
+                            <p className="m-0 text-[13px] text-text-muted">No documents uploaded yet</p>
                           )}
                         </div>
                       )}
                     </div>
 
                     {/* Admin note */}
-                    <div style={{ marginBottom: '16px' }}>
-                      <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Admin Note (shown to user)</label>
-                      <input
+                    <div className="mb-4">
+                      <Input
+                        label="Admin Note (shown to user)"
                         type="text"
                         value={note}
                         onChange={e => setNote(e.target.value)}
                         placeholder="Reason for approval or rejection..."
-                        style={{ width: '100%', padding: '10px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }}
                       />
                     </div>
 
                     {/* Action buttons */}
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                      <button onClick={() => handleVerify(user.id, 'approved')} style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}>✅ Approve</button>
-                      <button onClick={() => handleVerify(user.id, 'rejected')} style={{ background: '#c0392b', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}>❌ Reject</button>
-                      <button onClick={() => handleVerify(user.id, 'pending')} style={{ background: '#F5EFE6', color: '#8B5E3C', border: '1px solid #8B5E3C', padding: '12px 24px', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '14px' }}>Reset to Pending</button>
+                    <div className="flex flex-wrap gap-2.5">
+                      <Button className="border-oasis bg-oasis text-clay-contrast hover:bg-oasis" onClick={() => handleVerify(user.id, 'approved')}>Approve</Button>
+                      <Button className="border-danger bg-danger text-clay-contrast hover:bg-danger" onClick={() => handleVerify(user.id, 'rejected')}>Reject</Button>
+                      <Button variant="outline" onClick={() => handleVerify(user.id, 'pending')}>Reset to Pending</Button>
                     </div>
                   </div>
                 )}
@@ -547,8 +528,8 @@ export default function AdminPage() {
             ))}
 
             {activeTab === 'pending' && pendingVerification.length === 0 && (
-              <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-                <p style={{ color: '#999999', fontSize: '15px', margin: 0, fontWeight: '600' }}>No pending verifications</p>
+              <div className="border border-line bg-surface-raised p-10 text-center">
+                <p className="m-0 text-[15px] font-semibold text-text-muted">No pending verifications</p>
               </div>
             )}
           </div>

@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
+import Input from '@/components/Input'
 
 const categories = ['All', 'Cement', 'Iron Rods', 'Sand', 'Gravel', 'Blocks', 'Roofing', 'Tiles', 'Paint', 'Pipes', 'Electrical', 'Timber', 'Glass', 'Hardware']
 
@@ -105,163 +109,127 @@ export default function MarketplacePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
       {/* Order modal */}
       {orderingProduct && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#00000088', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Place Order</h3>
-            <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 24px' }}>{orderingProduct.name} — ₦{Number(orderingProduct.price).toLocaleString()} per {orderingProduct.unit}</p>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-6">
+          <div className="ticks w-full max-w-[480px] border border-line bg-surface-raised p-8">
+            <h3 className="m-0 mb-2 text-[18px] font-bold text-text">Place Order</h3>
+            <p className="m-0 mb-6 text-[14px] text-text-muted">{orderingProduct.name} — ₦{Number(orderingProduct.price).toLocaleString()} per {orderingProduct.unit}</p>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Quantity ({orderingProduct.unit})</label>
-              <input
-                type="number"
-                min="1"
-                value={orderForm.quantity}
-                onChange={e => setOrderForm({ ...orderForm, quantity: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-              />
+            <div className="mb-4">
+              <Input label={`Quantity (${orderingProduct.unit})`} type="number" min="1" value={orderForm.quantity} onChange={e => setOrderForm({ ...orderForm, quantity: e.target.value })} />
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Delivery Address *</label>
+            <div className="mb-4">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Delivery Address *</label>
               <textarea
                 placeholder="Enter your full delivery address..."
                 value={orderForm.delivery_address}
                 onChange={e => setOrderForm({ ...orderForm, delivery_address: e.target.value })}
                 rows={3}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Note to supplier (optional)</label>
-              <input
-                type="text"
-                placeholder="Any special instructions..."
-                value={orderForm.note}
-                onChange={e => setOrderForm({ ...orderForm, note: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-              />
+            <div className="mb-6">
+              <Input label="Note to supplier (optional)" type="text" placeholder="Any special instructions..." value={orderForm.note} onChange={e => setOrderForm({ ...orderForm, note: e.target.value })} />
             </div>
 
             {/* Total */}
-            <div style={{ background: '#F5EFE6', borderRadius: '10px', padding: '14px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '14px', color: '#666666' }}>Total</span>
-                <span style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A' }}>
+            <div className="mb-5 border border-line bg-surface-sunk p-3.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[14px] text-text-muted">Total</span>
+                <span className="font-mono text-[18px] font-bold tabular-nums text-text">
                   ₦{(orderingProduct.price * Number(orderForm.quantity || 0)).toLocaleString()}
                 </span>
               </div>
             </div>
 
-            {message && <p style={{ color: '#c0392b', fontSize: '13px', marginBottom: '12px' }}>{message}</p>}
+            {message && <p className="mb-3 text-[13px] text-danger">{message}</p>}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
+            <div className="flex gap-2.5">
+              <Button
+                variant="outline"
+                className="flex-1 justify-center"
                 onClick={() => { setOrderingProduct(null); setOrderForm({ quantity: 1, delivery_address: '', note: '' }); setMessage('') }}
-                style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '14px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
               >
                 Cancel
-              </button>
-              <button
-                onClick={handlePlaceOrder}
-                disabled={placingOrder}
-                style={{ flex: 2, background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '14px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
-              >
+              </Button>
+              <Button className="flex-[2] justify-center" disabled={placingOrder} onClick={handlePlaceOrder}>
                 {placingOrder ? 'Placing Order...' : 'Confirm Order'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px', marginBottom: '32px' }}>
+      <div className="mx-auto max-w-[1000px] px-6 py-10">
+        <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Materials Marketplace</h1>
-            <p style={{ color: '#666666', fontSize: '15px', margin: 0 }}>Compare prices from verified suppliers across Nigeria</p>
+            <h1 className="m-0 mb-2 text-[28px] font-bold text-text">Materials Marketplace</h1>
+            <p className="m-0 text-[15px] text-text-muted">Compare prices from verified suppliers across Nigeria</p>
           </div>
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <Link href="/orders" style={{ background: '#F5EFE6', color: '#8B5E3C', textDecoration: 'none', border: '1.5px solid #8B5E3C', padding: '10px 20px', borderRadius: '10px', fontWeight: '700', fontSize: '14px' }}>
-              My Orders
-            </Link>
+          <div className="flex flex-wrap gap-2.5">
+            <Button href="/orders" variant="outline">My Orders</Button>
             {profile?.role === 'supplier' && (
-              <button onClick={() => setShowAddForm(!showAddForm)} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
-                + List a Product
-              </button>
+              <Button onClick={() => setShowAddForm(!showAddForm)}>+ List a Product</Button>
             )}
           </div>
         </div>
 
-        {message && <p style={{ color: message.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
+        {message && <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{message}</p>}
 
         {/* Add product form */}
         {showAddForm && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #8B5E3C', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 20px' }}>List a New Product</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+          <div className="ticks mb-6 border border-clay bg-surface-raised p-8">
+            <h3 className="m-0 mb-5 text-[16px] font-bold text-text">List a New Product</h3>
+            <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-4">
+              <Input label="Product Name" type="text" placeholder="e.g. Dangote Cement 50kg" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })} />
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Product Name</label>
-                <input type="text" placeholder="e.g. Dangote Cement 50kg" value={newProduct.name} onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Category</label>
+                <label className="mb-1.5 block text-[13px] font-semibold text-text">Category</label>
                 <select value={newProduct.category} onChange={e => setNewProduct({ ...newProduct, category: e.target.value })}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#FFFFFF', boxSizing: 'border-box' }}>
+                  className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay">
                   <option value="">Select category</option>
                   {categories.filter(c => c !== 'All').map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Price (₦)</label>
-                <input type="number" placeholder="e.g. 8500" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Unit</label>
-                <input type="text" placeholder="e.g. bag, ton, piece" value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
-              </div>
+              <Input label="Price (₦)" type="number" placeholder="e.g. 8500" value={newProduct.price} onChange={e => setNewProduct({ ...newProduct, price: e.target.value })} />
+              <Input label="Unit" type="text" placeholder="e.g. bag, ton, piece" value={newProduct.unit} onChange={e => setNewProduct({ ...newProduct, unit: e.target.value })} />
             </div>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Description (optional)</label>
+            <div className="mb-5">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Description (optional)</label>
               <textarea placeholder="Any extra details about this product..." value={newProduct.description} onChange={e => setNewProduct({ ...newProduct, description: e.target.value })} rows={2}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowAddForm(false)} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleAddProduct} disabled={adding} style={{ flex: 2, background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={() => setShowAddForm(false)}>Cancel</Button>
+              <Button className="flex-[2] justify-center" disabled={adding} onClick={handleAddProduct}>
                 {adding ? 'Adding...' : 'Add Product'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Search */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+        <div className="mb-5">
           <input type="text" placeholder="Search materials..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '200px', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#FFFFFF' }} />
+            className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
         </div>
 
         {/* Category pills */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '24px' }}>
+        <div className="mb-6 flex flex-wrap gap-2">
           {categories.map(cat => (
             <button key={cat} onClick={() => setCategory(cat)}
-              style={{ padding: '8px 16px', borderRadius: '20px', border: `1.5px solid ${category === cat ? '#1A1A1A' : '#EEE6DA'}`, background: category === cat ? '#1A1A1A' : '#FFFFFF', color: category === cat ? '#FFFFFF' : '#666666', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
+              className={`border px-4 py-2 text-[13px] font-semibold ${category === cat ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}>
               {cat}
             </button>
           ))}
@@ -270,46 +238,39 @@ export default function MarketplacePage() {
         {/* Products grid */}
         {filtered.length === 0
           ? (
-            <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '60px', textAlign: 'center' }}>
-              <p style={{ color: '#999999', fontSize: '15px', margin: '0 0 8px' }}>No products listed yet.</p>
-              {profile?.role === 'supplier' && <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>You can list your first product above.</p>}
+            <div className="border border-line bg-surface-raised p-16 text-center">
+              <p className="m-0 mb-2 text-[15px] text-text-muted">No products listed yet.</p>
+              {profile?.role === 'supplier' && <p className="m-0 text-[13px] text-text-muted">You can list your first product above.</p>}
             </div>
           )
           : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
               {filtered.map(product => (
-                <div key={product.id} style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ margin: '0 0 4px', fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>{product.name}</p>
-                      {product.category && <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>{product.category}</span>}
+                <div key={product.id} className="border border-line bg-surface-raised p-6">
+                  <div className="mb-3 flex items-start justify-between">
+                    <div className="flex-1">
+                      <p className="m-0 mb-1 text-[15px] font-bold text-text">{product.name}</p>
+                      {product.category && <Badge tone="pending">{product.category}</Badge>}
                     </div>
-                    <div style={{ textAlign: 'right', marginLeft: '12px' }}>
-                      <p style={{ margin: '0 0 2px', fontWeight: '800', fontSize: '18px', color: '#1A1A1A' }}>₦{Number(product.price).toLocaleString()}</p>
-                      <p style={{ margin: 0, fontSize: '11px', color: '#999999' }}>per {product.unit}</p>
+                    <div className="ml-3 text-right">
+                      <p className="m-0 mb-0.5 font-mono text-[18px] font-bold tabular-nums text-text">₦{Number(product.price).toLocaleString()}</p>
+                      <p className="m-0 text-[11px] text-text-muted">per {product.unit}</p>
                     </div>
                   </div>
 
-                  {product.description && <p style={{ fontSize: '13px', color: '#666666', margin: '0 0 12px', lineHeight: '1.5' }}>{product.description}</p>}
+                  {product.description && <p className="mb-3 text-[13px] leading-relaxed text-text-muted">{product.description}</p>}
 
-                  <div style={{ borderTop: '1px solid #EEE6DA', paddingTop: '12px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div className="border-t border-line pt-3">
+                    <div className="mb-2.5 flex items-center justify-between">
                       <div>
-                        <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '600', color: '#1A1A1A' }}>{product.profiles?.company_name || product.profiles?.full_name}</p>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#999999' }}>{[product.profiles?.city, product.profiles?.state].filter(Boolean).join(', ')}</p>
+                        <p className="m-0 mb-0.5 text-[13px] font-semibold text-text">{product.profiles?.company_name || product.profiles?.full_name}</p>
+                        <p className="m-0 text-[12px] text-text-muted">{[product.profiles?.city, product.profiles?.state].filter(Boolean).join(', ')}</p>
                       </div>
-                      {product.profiles?.is_verified && (
-                        <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>✓ Verified</span>
-                      )}
+                      {product.profiles?.is_verified && <Badge tone="success">Verified</Badge>}
                     </div>
 
                     {profile?.id !== product.profiles?.id && (
-                      <button
-                        onClick={() => setOrderingProduct(product)}
-                        style={{ width: '100%', background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
-                      >
-                        Order Now
-                      </button>
+                      <Button className="w-full justify-center text-[13px]" onClick={() => setOrderingProduct(product)}>Order Now</Button>
                     )}
                   </div>
                 </div>

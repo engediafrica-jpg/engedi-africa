@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
+import Input from '@/components/Input'
 
 export default function ServiceProviderProfilePage() {
   const supabase = createClient()
@@ -138,54 +142,51 @@ export default function ServiceProviderProfilePage() {
   }
 
   const StarDisplay = ({ value, size = 20 }) => (
-    <div style={{ display: 'flex', gap: '2px' }}>
+    <div className="flex gap-0.5">
       {[1,2,3,4,5].map(s => (
-        <span key={s} style={{ fontSize: size, color: s <= value ? '#F59E0B' : '#EEE6DA' }}>★</span>
+        <span key={s} style={{ fontSize: size }} className={s <= value ? 'text-clay' : 'text-line-strong'}>★</span>
       ))}
     </div>
   )
 
   const StarInput = () => (
-    <div style={{ display: 'flex', gap: '4px', marginBottom: '16px' }}>
+    <div className="mb-4 flex gap-1">
       {[1,2,3,4,5].map(s => (
         <span key={s} onClick={() => setRating(s)} onMouseEnter={() => setHoveredStar(s)} onMouseLeave={() => setHoveredStar(0)}
-          style={{ fontSize: '32px', cursor: 'pointer', color: s <= (hoveredStar || rating) ? '#F59E0B' : '#EEE6DA' }}>★</span>
+          className={`cursor-pointer text-[32px] ${s <= (hoveredStar || rating) ? 'text-clay' : 'text-line-strong'}`}>★</span>
       ))}
     </div>
   )
 
-  if (loading) return <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: '#666666' }}>Loading...</p></div>
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-surface"><p className="text-text-muted">Loading...</p></div>
 
   const canReview = completedBookings.length > 0
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/browse" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Back to Browse</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/browse" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Back to Browse</Link>} />
 
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '40px 24px' }}>
+      <div className="mx-auto max-w-[720px] px-6 py-10">
 
         {/* Profile card */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
-            <div style={{ width: '80px', height: '80px', borderRadius: '50%', background: '#F5EFE6', border: '2px solid #8B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#8B5E3C', fontSize: '28px', overflow: 'hidden', flexShrink: 0 }}>
-              {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (profile.company_name || profile.full_name)?.charAt(0)?.toUpperCase()}
+        <div className="ticks mb-6 border border-line bg-surface-raised p-8">
+          <div className="flex flex-wrap items-start gap-5">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-clay bg-surface-sunk font-display text-[28px] font-bold text-clay">
+              {profile.avatar_url ? <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" /> : (profile.company_name || profile.full_name)?.charAt(0)?.toUpperCase()}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A1A', margin: 0 }}>{profile.company_name || profile.full_name}</h1>
-                {profile.is_verified && <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>✓ EnGedi Verified</span>}
+            <div className="flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                <h1 className="m-0 text-[22px] font-bold text-text">{profile.company_name || profile.full_name}</h1>
+                {profile.is_verified && <Badge tone="success">EnGedi Verified</Badge>}
               </div>
-              <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>Service Provider</span>
-              {(profile.city || profile.state) && <p style={{ color: '#666666', fontSize: '14px', margin: '10px 0 0' }}>📍 {[profile.city, profile.state].filter(Boolean).join(', ')}</p>}
-              {profile.experience_years && <p style={{ color: '#666666', fontSize: '14px', margin: '4px 0 0' }}>⏱ {profile.experience_years} years experience</p>}
+              <Badge tone="pending">Service Provider</Badge>
+              {(profile.city || profile.state) && <p className="mb-0 mt-2.5 text-[14px] text-text-muted">{[profile.city, profile.state].filter(Boolean).join(', ')}</p>}
+              {profile.experience_years && <p className="m-0 mt-1 text-[14px] text-text-muted">{profile.experience_years} years experience</p>}
               {avgRating && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px' }}>
+                <div className="mt-2.5 flex items-center gap-2">
                   <StarDisplay value={Math.round(avgRating)} size={18} />
-                  <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>{avgRating}</span>
-                  <span style={{ fontSize: '13px', color: '#999999' }}>({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
+                  <span className="text-[14px] font-bold text-text">{avgRating}</span>
+                  <span className="text-[13px] text-text-muted">({reviews.length} {reviews.length === 1 ? 'review' : 'reviews'})</span>
                 </div>
               )}
             </div>
@@ -194,146 +195,134 @@ export default function ServiceProviderProfilePage() {
 
         {/* Bio */}
         {profile.bio && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 12px' }}>About</h3>
-            <p style={{ fontSize: '14px', color: '#666666', lineHeight: '1.7', margin: 0 }}>{profile.bio}</p>
+          <div className="mb-6 border border-line bg-surface-raised p-6">
+            <h3 className="m-0 mb-3 text-[16px] font-bold text-text">About</h3>
+            <p className="m-0 text-[14px] leading-relaxed text-text-muted">{profile.bio}</p>
           </div>
         )}
 
         {/* Details */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 16px' }}>Details</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {profile.company_name && <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: '#999999', minWidth: '140px' }}>Company</span><span style={{ fontSize: '13px', color: '#1A1A1A', fontWeight: '600' }}>{profile.company_name}</span></div>}
-            {profile.cac_number && <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: '#999999', minWidth: '140px' }}>CAC Number</span><span style={{ fontSize: '13px', color: '#1A1A1A', fontWeight: '600' }}>{profile.cac_number}</span></div>}
-            {profile.state && <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: '#999999', minWidth: '140px' }}>State</span><span style={{ fontSize: '13px', color: '#1A1A1A', fontWeight: '600' }}>{profile.state}</span></div>}
-            {profile.experience_years && <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: '#999999', minWidth: '140px' }}>Experience</span><span style={{ fontSize: '13px', color: '#1A1A1A', fontWeight: '600' }}>{profile.experience_years} years</span></div>}
-            <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: '#999999', minWidth: '140px' }}>Verification</span><span style={{ fontSize: '13px', color: profile.is_verified ? '#27ae60' : '#999999', fontWeight: '600' }}>{profile.is_verified ? '✓ Verified' : 'Not yet verified'}</span></div>
+        <div className="mb-6 border border-line bg-surface-raised p-6">
+          <h3 className="m-0 mb-4 text-[16px] font-bold text-text">Details</h3>
+          <div className="flex flex-col gap-3">
+            {profile.company_name && <div className="flex gap-3"><span className="min-w-[140px] text-[13px] text-text-muted">Company</span><span className="text-[13px] font-semibold text-text">{profile.company_name}</span></div>}
+            {profile.cac_number && <div className="flex gap-3"><span className="min-w-[140px] text-[13px] text-text-muted">CAC Number</span><span className="text-[13px] font-semibold text-text">{profile.cac_number}</span></div>}
+            {profile.state && <div className="flex gap-3"><span className="min-w-[140px] text-[13px] text-text-muted">State</span><span className="text-[13px] font-semibold text-text">{profile.state}</span></div>}
+            {profile.experience_years && <div className="flex gap-3"><span className="min-w-[140px] text-[13px] text-text-muted">Experience</span><span className="text-[13px] font-semibold text-text">{profile.experience_years} years</span></div>}
+            <div className="flex gap-3"><span className="min-w-[140px] text-[13px] text-text-muted">Verification</span><span className={`text-[13px] font-semibold ${profile.is_verified ? 'text-oasis' : 'text-text-muted'}`}>{profile.is_verified ? 'Verified' : 'Not yet verified'}</span></div>
           </div>
         </div>
 
         {/* Reviews */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+        <div className="mb-6 border border-line bg-surface-raised p-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px' }}>Reviews {reviews.length > 0 && `(${reviews.length})`}</h3>
-              {avgRating && <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><StarDisplay value={Math.round(avgRating)} size={16} /><span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>{avgRating} out of 5</span></div>}
+              <h3 className="m-0 mb-1 text-[16px] font-bold text-text">Reviews {reviews.length > 0 && `(${reviews.length})`}</h3>
+              {avgRating && <div className="flex items-center gap-2"><StarDisplay value={Math.round(avgRating)} size={16} /><span className="text-[14px] font-bold text-text">{avgRating} out of 5</span></div>}
             </div>
             {currentUser?.id !== profile.id && canReview && (
-              <button onClick={() => setShowReviewForm(!showReviewForm)} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                + Write a Review
-              </button>
+              <Button className="text-[13px]" onClick={() => setShowReviewForm(!showReviewForm)}>+ Write a Review</Button>
             )}
           </div>
 
           {currentUser?.id !== profile.id && !canReview && (
-            <p style={{ color: '#999999', fontSize: '12px', margin: '0 0 16px' }}>You can leave a review once you&apos;ve completed a booking with this provider.</p>
+            <p className="mb-4 text-[12px] text-text-muted">You can leave a review once you&apos;ve completed a booking with this provider.</p>
           )}
 
           {showReviewForm && (
-            <div style={{ background: '#F9F6F1', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+            <div className="mb-5 border border-line bg-surface-sunk p-5">
               {completedBookings.length > 1 && (
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Which job is this review for?</label>
+                <div className="mb-4">
+                  <label className="mb-1.5 block text-[13px] font-semibold text-text">Which job is this review for?</label>
                   <select value={selectedBookingId} onChange={e => setSelectedBookingId(e.target.value)}
-                    style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}>
+                    className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay">
                     {completedBookings.map(b => (
                       <option key={b.id} value={b.id}>{b.job_title} — {new Date(b.created_at).toLocaleDateString()}</option>
                     ))}
                   </select>
                 </div>
               )}
-              <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A1A', margin: '0 0 12px' }}>Your rating</p>
+              <p className="m-0 mb-3 text-[14px] font-semibold text-text">Your rating</p>
               <StarInput />
-              <div style={{ marginBottom: '16px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Your review (optional)</label>
+              <div className="mb-4">
+                <label className="mb-1.5 block text-[13px] font-semibold text-text">Your review (optional)</label>
                 <textarea value={reviewBody} onChange={e => setReviewBody(e.target.value)} rows={3} placeholder="Share your experience with this service provider..."
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+                  className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
               </div>
-              {reviewMessage && <p style={{ color: '#c0392b', fontSize: '13px', marginBottom: '12px' }}>{reviewMessage}</p>}
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={() => setShowReviewForm(false)} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                <button onClick={handleSubmitReview} disabled={submittingReview} style={{ flex: 2, background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+              {reviewMessage && <p className="mb-3 text-[13px] text-danger">{reviewMessage}</p>}
+              <div className="flex gap-2.5">
+                <Button variant="outline" className="flex-1 justify-center text-[13px]" onClick={() => setShowReviewForm(false)}>Cancel</Button>
+                <Button className="flex-[2] justify-center text-[13px]" disabled={submittingReview} onClick={handleSubmitReview}>
                   {submittingReview ? 'Submitting...' : 'Submit Review'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
 
-          {reviewMessage && !showReviewForm && <p style={{ color: '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{reviewMessage}</p>}
+          {reviewMessage && !showReviewForm && <p className="mb-4 text-[13px] font-semibold text-oasis">{reviewMessage}</p>}
 
           {reviews.length === 0
-            ? <p style={{ color: '#999999', fontSize: '14px', margin: 0 }}>No reviews yet. Be the first to leave one.</p>
+            ? <p className="m-0 text-[14px] text-text-muted">No reviews yet. Be the first to leave one.</p>
             : reviews.map(review => (
-              <div key={review.id} style={{ borderTop: '1px solid #EEE6DA', paddingTop: '16px', marginTop: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', flexWrap: 'wrap', gap: '8px' }}>
+              <div key={review.id} className="mt-4 border-t border-line pt-4">
+                <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <p style={{ margin: '0 0 4px', fontWeight: '700', fontSize: '14px', color: '#1A1A1A' }}>{review.reviewer?.full_name || 'Anonymous'}</p>
+                    <p className="m-0 mb-1 text-[14px] font-bold text-text">{review.reviewer?.full_name || 'Anonymous'}</p>
                     <StarDisplay value={review.rating} size={14} />
                   </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#999999' }}>{new Date(review.created_at).toLocaleDateString()}</p>
+                  <p className="m-0 text-[12px] text-text-muted">{new Date(review.created_at).toLocaleDateString()}</p>
                 </div>
-                {review.body && <p style={{ fontSize: '14px', color: '#666666', margin: '8px 0 0', lineHeight: '1.6' }}>{review.body}</p>}
+                {review.body && <p className="mt-2 text-[14px] leading-relaxed text-text-muted">{review.body}</p>}
               </div>
             ))
           }
         </div>
 
         {currentUser?.id !== profile.id && (
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-            <button onClick={() => setShowBookingForm(true)} style={{ flex: 2, minWidth: '200px', background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
-              Request a Quote
-            </button>
-            <button onClick={handleStartConversation} disabled={messaging || messageSent} style={{ flex: 1, minWidth: '160px', background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
+          <div className="flex flex-wrap gap-2.5">
+            <Button className="min-w-[200px] flex-[2] justify-center" onClick={() => setShowBookingForm(true)}>Request a Quote</Button>
+            <Button variant="outline" className="min-w-[160px] flex-1 justify-center" disabled={messaging || messageSent} onClick={handleStartConversation}>
               {messageSent ? '✓ Redirecting...' : messaging ? 'Opening chat...' : `Contact`}
-            </button>
+            </Button>
           </div>
         )}
-        {bookingMessage && !showBookingForm && <p style={{ color: bookingMessage.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginTop: '12px', fontWeight: '600' }}>{bookingMessage}</p>}
+        {bookingMessage && !showBookingForm && <p className={`mt-3 text-[13px] font-semibold ${bookingMessage.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{bookingMessage}</p>}
       </div>
 
       {/* Booking request modal */}
       {showBookingForm && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#00000088', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Request a Quote</h3>
-            <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 24px' }}>Tell {profile.company_name || profile.full_name?.split(' ')[0]} about the job. They&apos;ll respond with a price.</p>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-6">
+          <div className="ticks max-h-[90vh] w-full max-w-[480px] overflow-y-auto border border-line bg-surface-raised p-8">
+            <h3 className="m-0 mb-2 text-[18px] font-bold text-text">Request a Quote</h3>
+            <p className="m-0 mb-6 text-[14px] text-text-muted">Tell {profile.company_name || profile.full_name?.split(' ')[0]} about the job. They&apos;ll respond with a price.</p>
 
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Job title</label>
-              <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Weekly office cleaning for construction site"
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            <div className="mb-3.5">
+              <Input label="Job title" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Weekly office cleaning for construction site" />
             </div>
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Job description</label>
+            <div className="mb-3.5">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Job description</label>
               <textarea value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={3} placeholder="Describe the scope of work..."
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
             </div>
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Location</label>
-              <input value={jobLocation} onChange={e => setJobLocation(e.target.value)} placeholder="e.g. Lekki, Lagos"
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            <div className="mb-3.5">
+              <Input label="Location" value={jobLocation} onChange={e => setJobLocation(e.target.value)} placeholder="e.g. Lekki, Lagos" />
             </div>
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Preferred date</label>
-                <input type="date" value={preferredDate} onChange={e => setPreferredDate(e.target.value)}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            <div className="mb-3.5 flex gap-3">
+              <div className="flex-1">
+                <Input label="Preferred date" type="date" value={preferredDate} onChange={e => setPreferredDate(e.target.value)} />
               </div>
-              <div style={{ flex: 1 }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Budget (₦)</label>
-                <input type="number" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Optional"
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+              <div className="flex-1">
+                <Input label="Budget (₦)" type="number" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Optional" />
               </div>
             </div>
 
-            {bookingMessage && <p style={{ color: bookingMessage.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '12px' }}>{bookingMessage}</p>}
+            {bookingMessage && <p className={`mb-3 text-[13px] ${bookingMessage.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{bookingMessage}</p>}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => { setShowBookingForm(false); setBookingMessage('') }} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSubmitBooking} disabled={submittingBooking} style={{ flex: 2, background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={() => { setShowBookingForm(false); setBookingMessage('') }}>Cancel</Button>
+              <Button className="flex-[2] justify-center" disabled={submittingBooking} onClick={handleSubmitBooking}>
                 {submittingBooking ? 'Sending...' : 'Send Request'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

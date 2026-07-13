@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
 
 export default function WalletPage() {
   const supabase = createClient()
@@ -75,7 +77,7 @@ export default function WalletPage() {
             created_at: new Date().toISOString(),
             purpose: 'wallet_topup',
           }, ...prev])
-          setMessage('✓ Payment successful! ₦' + payAmount.toLocaleString() + ' added to your wallet.')
+          setMessage('Payment successful! ₦' + payAmount.toLocaleString() + ' added to your wallet.')
           setAmount('')
         }
         setPaying(false)
@@ -106,93 +108,86 @@ export default function WalletPage() {
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Back to Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Back to Dashboard</Link>} />
 
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '32px' }}>Wallet</h1>
+      <div className="mx-auto max-w-[680px] px-6 py-10">
+        <h1 className="mb-8 text-[24px] font-bold">Wallet</h1>
 
         {/* Balance card */}
-        <div style={{ background: '#1A1A1A', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-          <p style={{ color: '#999999', fontSize: '13px', margin: '0 0 8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '1px' }}>Total Deposited</p>
-          <p style={{ color: '#FFFFFF', fontSize: '36px', fontWeight: '800', margin: '0 0 4px' }}>₦{totalDeposited.toLocaleString()}</p>
-          <p style={{ color: '#8B5E3C', fontSize: '13px', margin: 0 }}>
+        <div className="mb-6 border border-clay-deep bg-ink p-8">
+          <p className="m-0 mb-2 font-mono text-[12px] font-semibold uppercase tracking-wider text-ink-muted">Total Deposited</p>
+          <p className="m-0 mb-1 font-mono text-[36px] font-bold tabular-nums text-ink-text">₦{totalDeposited.toLocaleString()}</p>
+          <p className="m-0 text-[13px] text-clay">
             {transactions.filter(t => t.status === 'success').length} successful transactions
           </p>
         </div>
 
         {/* Top up */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 16px' }}>Top Up Wallet</h3>
+        <div className="ticks mb-6 border border-line bg-surface-raised p-8">
+          <h3 className="m-0 mb-4 text-[16px] font-bold text-text">Top Up Wallet</h3>
 
           {/* Quick amounts */}
-          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '16px' }}>
+          <div className="mb-4 flex flex-wrap gap-2.5">
             {[1000, 5000, 10000, 50000].map(preset => (
               <button
                 key={preset}
                 onClick={() => setAmount(preset.toString())}
-                style={{ background: amount === preset.toString() ? '#1A1A1A' : '#F5EFE6', color: amount === preset.toString() ? '#FFFFFF' : '#8B5E3C', border: `1.5px solid ${amount === preset.toString() ? '#1A1A1A' : '#8B5E3C'}`, padding: '8px 16px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+                className={`border px-4 py-2 font-mono text-[13px] font-bold tabular-nums ${amount === preset.toString() ? 'border-text bg-text text-surface' : 'border-clay text-clay hover:bg-surface-sunk'}`}
               >
                 ₦{preset.toLocaleString()}
               </button>
             ))}
           </div>
 
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '12px' }}>
+          <div className="mb-3 flex flex-wrap gap-3">
             <input
               type="number"
               placeholder="Or enter amount in ₦"
               value={amount}
               onChange={e => setAmount(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handlePayment()}
-              style={{ flex: 1, minWidth: '180px', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+              className="min-w-[180px] flex-1 border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
             />
-            <button
-              onClick={handlePayment}
-              disabled={paying}
-              style={{ background: paying ? '#EEE6DA' : '#1A1A1A', color: paying ? '#999999' : '#FFFFFF', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: paying ? 'not-allowed' : 'pointer', flexShrink: 0 }}
-            >
+            <Button onClick={handlePayment} disabled={paying} className="shrink-0">
               {paying ? 'Processing...' : 'Pay Now'}
-            </button>
+            </Button>
           </div>
 
           {message && (
-            <p style={{ color: message.includes('✓') ? '#2ecc71' : message.includes('failed') || message.includes('Error') ? '#c0392b' : '#8B5E3C', fontSize: '13px', marginTop: '8px', fontWeight: '600', lineHeight: '1.5' }}>
+            <p className={`mt-2 text-[13px] font-semibold leading-relaxed ${message.includes('successful') ? 'text-oasis' : message.includes('failed') || message.includes('Error') ? 'text-danger' : 'text-clay'}`}>
               {message}
             </p>
           )}
         </div>
 
         {/* Transactions */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px' }}>
-          <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 20px' }}>Transaction History</h3>
+        <div className="border border-line bg-surface-raised p-8">
+          <h3 className="m-0 mb-5 text-[16px] font-bold text-text">Transaction History</h3>
           {transactions.length === 0 ? (
-            <p style={{ color: '#999999', fontSize: '14px', margin: 0 }}>No transactions yet</p>
+            <p className="m-0 text-[14px] text-text-muted">No transactions yet</p>
           ) : (
             transactions.map((tx, i) => (
-              <div key={tx.id || i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', borderBottom: i < transactions.length - 1 ? '1px solid #EEE6DA' : 'none' }}>
+              <div key={tx.id || i} className={`flex items-center justify-between py-3.5 ${i < transactions.length - 1 ? 'border-b border-line' : ''}`}>
                 <div>
-                  <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '600', color: '#1A1A1A' }}>
+                  <p className="m-0 mb-1 text-[14px] font-semibold text-text">
                     {tx.purpose === 'wallet_topup' ? 'Wallet Top-up' : tx.purpose || 'Transaction'}
                   </p>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#999999' }}>
+                  <p className="m-0 font-mono text-[12px] text-text-muted">
                     {new Date(tx.created_at).toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '700', color: '#1A1A1A' }}>
+                <div className="text-right">
+                  <p className="m-0 mb-1 font-mono text-[15px] font-bold tabular-nums text-text">
                     ₦{Number(tx.amount).toLocaleString()}
                   </p>
-                  <p style={{ margin: 0, fontSize: '12px', color: tx.status === 'success' ? '#2ecc71' : '#c0392b', fontWeight: '600', textTransform: 'capitalize' }}>
+                  <p className={`m-0 text-[12px] font-semibold capitalize ${tx.status === 'success' ? 'text-oasis' : 'text-danger'}`}>
                     {tx.status}
                   </p>
                 </div>

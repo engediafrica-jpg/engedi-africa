@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Badge from '@/components/Badge'
 
 const states = ['All', 'Lagos', 'Abuja', 'Rivers', 'Kano', 'Oyo', 'Anambra', 'Delta', 'Enugu', 'Ogun', 'Kaduna', 'Katsina', 'Borno', 'Imo', 'Edo']
 
@@ -76,23 +78,20 @@ export default function BrowsePage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Find Professionals</h1>
-        <p style={{ color: '#666666', fontSize: '15px', margin: '0 0 32px' }}>Browse verified artisans, suppliers, and professionals across Nigeria</p>
+      <div className="mx-auto max-w-[1000px] px-6 py-10">
+        <h1 className="m-0 mb-2 text-[28px] font-bold text-text">Find Professionals</h1>
+        <p className="m-0 mb-8 text-[15px] text-text-muted">Browse verified artisans, suppliers, and professionals across Nigeria</p>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
+        <div className="mb-6 flex flex-wrap gap-2">
           {tabs.map(tab => (
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              style={{ padding: '10px 18px', borderRadius: '8px', border: `1.5px solid ${activeTab === tab.key ? '#1A1A1A' : '#EEE6DA'}`, background: activeTab === tab.key ? '#1A1A1A' : '#FFFFFF', color: activeTab === tab.key ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
+              className={`border px-[18px] py-2.5 text-[13px] font-bold ${activeTab === tab.key ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}
             >
               {tab.label}
             </button>
@@ -100,29 +99,29 @@ export default function BrowsePage() {
         </div>
 
         {/* Tab description */}
-        <p style={{ color: '#999999', fontSize: '13px', margin: '0 0 20px' }}>
+        <p className="m-0 mb-5 text-[13px] text-text-muted">
           {tabs.find(t => t.key === activeTab)?.desc}
         </p>
 
         {/* Filters */}
-        <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="mb-4 flex flex-wrap items-center gap-3">
           <input
             type="text"
             placeholder="Search by name, skill, or location..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '200px', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#FFFFFF' }}
+            className="min-w-[200px] flex-1 border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
           />
           <select
             value={state}
             onChange={e => setState(e.target.value)}
-            style={{ padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#FFFFFF', minWidth: '140px' }}
+            className="min-w-[140px] border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
           >
             {states.map(s => <option key={s} value={s}>{s === 'All' ? 'All States' : s}</option>)}
           </select>
           <button
             onClick={() => setVerifiedOnly(!verifiedOnly)}
-            style={{ padding: '12px 16px', borderRadius: '8px', border: `1.5px solid ${verifiedOnly ? '#2ecc71' : '#EEE6DA'}`, background: verifiedOnly ? '#e8f8f0' : '#FFFFFF', color: verifiedOnly ? '#27ae60' : '#666666', fontWeight: '700', fontSize: '13px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+            className={`whitespace-nowrap border px-4 py-3 text-[13px] font-bold ${verifiedOnly ? 'border-oasis bg-oasis-soft text-oasis' : 'border-line-strong text-text-muted hover:border-text'}`}
           >
             {verifiedOnly ? '✓ Verified Only' : 'All Users'}
           </button>
@@ -130,60 +129,54 @@ export default function BrowsePage() {
 
         {/* Results count */}
         {!loading && (
-          <p style={{ color: '#999999', fontSize: '13px', margin: '0 0 20px' }}>
+          <p className="m-0 mb-5 text-[13px] text-text-muted">
             {filtered.length} {filtered.length === 1 ? 'result' : 'results'} found
           </p>
         )}
 
         {/* Results */}
         {loading ? (
-          <p style={{ color: '#666666' }}>Loading...</p>
+          <p className="text-text-muted">Loading...</p>
         ) : filtered.length === 0 ? (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '60px', textAlign: 'center' }}>
-            <p style={{ color: '#999999', fontSize: '15px', margin: '0 0 8px', fontWeight: '600' }}>No results found</p>
-            <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>Try a different search or filter</p>
+          <div className="border border-line bg-surface-raised p-16 text-center">
+            <p className="m-0 mb-2 text-[15px] font-semibold text-text-muted">No results found</p>
+            <p className="m-0 text-[13px] text-text-muted">Try a different search or filter</p>
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
             {filtered.map(user => (
-              <Link key={user.id} href={getProfileLink(user)} style={{ textDecoration: 'none' }}>
-                <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px', cursor: 'pointer', height: '100%', boxSizing: 'border-box' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '14px' }}>
-                    <div style={{ width: '52px', height: '52px', borderRadius: '50%', background: '#F5EFE6', border: `2px solid ${user.is_verified ? '#2ecc71' : '#8B5E3C'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#8B5E3C', fontSize: '20px', overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+              <Link key={user.id} href={getProfileLink(user)} className="no-underline">
+                <div className="h-full border border-line bg-surface-raised p-6 transition-colors hover:bg-surface-sunk">
+                  <div className="mb-3.5 flex items-center gap-3.5">
+                    <div className={`flex h-[52px] w-[52px] shrink-0 items-center justify-center overflow-hidden rounded-full border-2 ${user.is_verified ? 'border-oasis' : 'border-clay'} bg-surface-sunk font-display text-[20px] font-bold text-clay`}>
                       {user.avatar_url
-                        ? <img src={user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <img src={user.avatar_url} alt="avatar" className="h-full w-full object-cover" />
                         : (user.company_name || user.full_name)?.charAt(0)?.toUpperCase()
                       }
                     </div>
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                      <p style={{ margin: '0 0 4px', fontWeight: '700', fontSize: '15px', color: '#1A1A1A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div className="flex-1 overflow-hidden">
+                      <p className="m-0 mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-bold text-text">
                         {user.company_name || user.full_name}
                       </p>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>
-                          {roleLabel[user.role]}
-                        </span>
-                        {user.is_verified && (
-                          <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>
-                            ✓ Verified
-                          </span>
-                        )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge tone="pending">{roleLabel[user.role]}</Badge>
+                        {user.is_verified && <Badge tone="success">Verified</Badge>}
                       </div>
                     </div>
                   </div>
 
                   {user.bio && (
-                    <p style={{ fontSize: '13px', color: '#666666', margin: '0 0 12px', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    <p className="mb-3 line-clamp-2 text-[13px] leading-relaxed text-text-muted">
                       {user.bio}
                     </p>
                   )}
 
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: '#999999', flexWrap: 'wrap' }}>
+                  <div className="flex flex-wrap gap-3 text-[12px] text-text-muted">
                     {(user.city || user.state) && (
-                      <span>📍 {[user.city, user.state].filter(Boolean).join(', ')}</span>
+                      <span>{[user.city, user.state].filter(Boolean).join(', ')}</span>
                     )}
                     {user.experience_years && (
-                      <span>⏱ {user.experience_years} yrs exp</span>
+                      <span>{user.experience_years} yrs exp</span>
                     )}
                   </div>
                 </div>

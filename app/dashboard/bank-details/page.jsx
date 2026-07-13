@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
 
 export default function BankDetailsPage() {
   const supabase = createClient()
@@ -107,35 +109,32 @@ export default function BankDetailsPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      <div style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '8px' }}>Bank Details</h1>
-        <p style={{ color: '#666666', fontSize: '14px', marginBottom: '32px' }}>Add your bank account to receive payments from EnGedi Africa</p>
+      <div className="mx-auto max-w-[600px] px-6 py-10">
+        <h1 className="mb-2 text-[24px] font-bold">Bank Details</h1>
+        <p className="mb-8 text-[14px] text-text-muted">Add your bank account to receive payments from EnGedi Africa</p>
 
         {/* Current details */}
         {profile?.bank_account_name && (
-          <div style={{ background: '#e8f8f0', border: '1.5px solid #2ecc71', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-            <p style={{ fontWeight: '700', color: '#27ae60', margin: '0 0 8px', fontSize: '15px' }}>✓ Bank account on file</p>
-            <p style={{ color: '#666666', fontSize: '14px', margin: '0 0 4px' }}><strong>Bank:</strong> {profile.bank_name}</p>
-            <p style={{ color: '#666666', fontSize: '14px', margin: '0 0 4px' }}><strong>Account Name:</strong> {profile.bank_account_name}</p>
-            <p style={{ color: '#666666', fontSize: '14px', margin: 0 }}><strong>Account Number:</strong> {profile.bank_account_number?.replace(/(\d{6})(\d{4})/, '******$2')}</p>
+          <div className="mb-6 border border-oasis bg-oasis-soft p-5">
+            <p className="m-0 mb-2 text-[15px] font-bold text-oasis">✓ Bank account on file</p>
+            <p className="m-0 mb-1 text-[14px] text-text-muted"><strong className="text-text">Bank:</strong> {profile.bank_name}</p>
+            <p className="m-0 mb-1 text-[14px] text-text-muted"><strong className="text-text">Account Name:</strong> {profile.bank_account_name}</p>
+            <p className="m-0 text-[14px] text-text-muted"><strong className="text-text">Account Number:</strong> {profile.bank_account_number?.replace(/(\d{6})(\d{4})/, '******$2')}</p>
           </div>
         )}
 
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px' }}>
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Select Bank</label>
+        <div className="ticks border border-line bg-surface-raised p-8">
+          <div className="mb-4">
+            <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Select Bank</label>
             <select
               value={form.bank_code}
               onChange={e => {
@@ -144,7 +143,7 @@ export default function BankDetailsPage() {
                 setAccountVerified(false)
                 setForm(prev => ({ ...prev, bank_code: e.target.value, bank_name: selected?.name || '', bank_account_name: '' }))
               }}
-              style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', background: '#FFFFFF', boxSizing: 'border-box' }}
+              className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
             >
               <option value="">Select your bank...</option>
               {banks.map(bank => (
@@ -153,9 +152,9 @@ export default function BankDetailsPage() {
             </select>
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Account Number</label>
-            <div style={{ display: 'flex', gap: '10px' }}>
+          <div className="mb-4">
+            <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Account Number</label>
+            <div className="flex gap-2.5">
               <input
                 type="text"
                 placeholder="10-digit account number"
@@ -165,39 +164,36 @@ export default function BankDetailsPage() {
                   setAccountVerified(false)
                 }}
                 maxLength={10}
-                style={{ flex: 1, padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                className="flex-1 border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
               />
-              <button
+              <Button
                 onClick={handleVerifyAccount}
                 disabled={verifying || form.bank_account_number.length !== 10 || !form.bank_code}
-                style={{ background: verifying ? '#EEE6DA' : '#8B5E3C', color: verifying ? '#999999' : '#FFFFFF', border: 'none', padding: '12px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: verifying ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}
+                variant="outline"
+                className="whitespace-nowrap text-[13px]"
               >
                 {verifying ? 'Checking...' : 'Verify'}
-              </button>
+              </Button>
             </div>
           </div>
 
           {form.bank_account_name && (
-            <div style={{ background: '#e8f8f0', border: '1px solid #2ecc71', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
-              <p style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#27ae60' }}>✓ {form.bank_account_name}</p>
+            <div className="mb-4 border border-oasis bg-oasis-soft px-4 py-3">
+              <p className="m-0 text-[14px] font-bold text-oasis">✓ {form.bank_account_name}</p>
             </div>
           )}
 
           {message && (
-            <p style={{ color: message.includes('Error') || message.includes('not') || message.includes('check') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>
+            <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') || message.includes('not') || message.includes('check') ? 'text-danger' : 'text-oasis'}`}>
               {message}
             </p>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving || !accountVerified}
-            style={{ width: '100%', background: saving || !accountVerified ? '#EEE6DA' : '#1A1A1A', color: saving || !accountVerified ? '#999999' : '#FFFFFF', border: 'none', padding: '14px', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: saving || !accountVerified ? 'not-allowed' : 'pointer' }}
-          >
+          <Button onClick={handleSave} disabled={saving || !accountVerified} className="w-full justify-center">
             {saving ? 'Saving...' : 'Save Bank Details'}
-          </button>
+          </Button>
 
-          <p style={{ color: '#999999', fontSize: '12px', marginTop: '12px', textAlign: 'center', lineHeight: '1.6' }}>
+          <p className="mt-3 text-center text-[12px] leading-relaxed text-text-muted">
             Your bank details are encrypted and only used to send you payments from EnGedi Africa.
           </p>
         </div>

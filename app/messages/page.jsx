@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
 
 export default function MessagesPage() {
   const supabase = createClient()
@@ -97,35 +98,30 @@ export default function MessagesPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', flexDirection: 'column' }}>
+    <div className="flex min-h-screen flex-col bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      {/* Topbar */}
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
-
-      <div style={{ flex: 1, display: 'flex', maxWidth: '1000px', width: '100%', margin: '0 auto', padding: '24px', gap: '20px', boxSizing: 'border-box' }}>
+      <div className="mx-auto flex w-full max-w-[1000px] flex-1 gap-5 p-6">
 
         {/* Conversations list */}
-        <div style={{ width: '280px', flexShrink: 0, background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <div style={{ padding: '20px', borderBottom: '1px solid #EEE6DA' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '800', color: '#1A1A1A', margin: 0 }}>Messages</h2>
-            <p style={{ fontSize: '12px', color: '#999999', margin: '4px 0 0' }}>{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
+        <div className="flex w-[280px] shrink-0 flex-col overflow-hidden border border-line bg-surface-raised">
+          <div className="border-b border-line p-5">
+            <h2 className="m-0 text-[16px] font-bold text-text">Messages</h2>
+            <p className="m-0 mt-1 text-[12px] text-text-muted">{conversations.length} conversation{conversations.length !== 1 ? 's' : ''}</p>
           </div>
 
-          <div style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="flex-1 overflow-y-auto">
             {conversations.length === 0
               ? (
-                <div style={{ padding: '24px', textAlign: 'center' }}>
-                  <p style={{ color: '#999999', fontSize: '13px', margin: '0 0 8px' }}>No conversations yet</p>
-                  <p style={{ color: '#999999', fontSize: '12px', margin: 0 }}>Visit an artisan or supplier profile to start a conversation</p>
+                <div className="p-6 text-center">
+                  <p className="m-0 mb-2 text-[13px] text-text-muted">No conversations yet</p>
+                  <p className="m-0 text-[12px] text-text-muted">Visit an artisan or supplier profile to start a conversation</p>
                 </div>
               )
               : conversations.map(conv => {
@@ -135,20 +131,20 @@ export default function MessagesPage() {
                     <div
                       key={conv.id}
                       onClick={() => openConversation(conv)}
-                      style={{ padding: '16px 20px', borderBottom: '1px solid #EEE6DA', cursor: 'pointer', background: isSelected ? '#F5EFE6' : '#FFFFFF', borderLeft: isSelected ? '3px solid #8B5E3C' : '3px solid transparent' }}
+                      className={`cursor-pointer border-b border-l-[3px] border-line px-5 py-4 ${isSelected ? 'border-l-clay bg-surface-sunk' : 'border-l-transparent bg-surface-raised'}`}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#F5EFE6', border: '1.5px solid #8B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: '#8B5E3C', fontSize: '16px', flexShrink: 0, overflow: 'hidden' }}>
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-clay bg-surface-sunk font-display text-[16px] font-bold text-clay">
                           {other?.avatar_url
-                            ? <img src={other.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            ? <img src={other.avatar_url} alt="avatar" className="h-full w-full object-cover" />
                             : other?.full_name?.charAt(0)?.toUpperCase() || '?'
                           }
                         </div>
-                        <div style={{ overflow: 'hidden', flex: 1 }}>
-                          <p style={{ margin: '0 0 2px', fontWeight: '700', fontSize: '14px', color: '#1A1A1A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div className="flex-1 overflow-hidden">
+                          <p className="m-0 mb-0.5 overflow-hidden text-ellipsis whitespace-nowrap text-[14px] font-bold text-text">
                             {other?.full_name || 'Unknown'}
                           </p>
-                          <p style={{ margin: 0, fontSize: '11px', color: '#999999', textTransform: 'capitalize' }}>
+                          <p className="m-0 text-[11px] capitalize text-text-muted">
                             {other?.role?.replace('_', ' ')}
                           </p>
                         </div>
@@ -161,58 +157,49 @@ export default function MessagesPage() {
         </div>
 
         {/* Chat window */}
-        <div style={{ flex: 1, background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: '500px' }}>
+        <div className="flex min-h-[500px] flex-1 flex-col overflow-hidden border border-line bg-surface-raised">
           {!selected
             ? (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
-                <p style={{ color: '#999999', fontSize: '24px', marginBottom: '12px' }}>💬</p>
-                <p style={{ color: '#999999', fontSize: '15px', fontWeight: '600', margin: '0 0 8px' }}>Select a conversation</p>
-                <p style={{ color: '#999999', fontSize: '13px', margin: 0, textAlign: 'center' }}>Choose a conversation from the left to start chatting</p>
+              <div className="flex flex-1 flex-col items-center justify-center p-10">
+                <p className="m-0 mb-3 text-[15px] font-semibold text-text-muted">Select a conversation</p>
+                <p className="m-0 text-center text-[13px] text-text-muted">Choose a conversation from the left to start chatting</p>
               </div>
             )
             : (
               <>
                 {/* Chat header */}
-                <div style={{ padding: '16px 24px', borderBottom: '1px solid #EEE6DA', display: 'flex', alignItems: 'center', gap: '12px', flexShrink: 0 }}>
-                  <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#F5EFE6', border: '1.5px solid #8B5E3C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', color: '#8B5E3C', overflow: 'hidden', flexShrink: 0 }}>
+                <div className="flex shrink-0 items-center gap-3 border-b border-line px-6 py-4">
+                  <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-clay bg-surface-sunk font-bold text-clay">
                     {getOtherPerson(selected)?.avatar_url
-                      ? <img src={getOtherPerson(selected).avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <img src={getOtherPerson(selected).avatar_url} alt="avatar" className="h-full w-full object-cover" />
                       : getOtherPerson(selected)?.full_name?.charAt(0)?.toUpperCase()
                     }
                   </div>
                   <div>
-                    <p style={{ margin: '0 0 2px', fontWeight: '700', fontSize: '15px', color: '#1A1A1A' }}>
+                    <p className="m-0 mb-0.5 text-[15px] font-bold text-text">
                       {getOtherPerson(selected)?.full_name}
                     </p>
-                    <p style={{ margin: 0, fontSize: '12px', color: '#999999', textTransform: 'capitalize' }}>
+                    <p className="m-0 text-[12px] capitalize text-text-muted">
                       {getOtherPerson(selected)?.role?.replace('_', ' ')}
                     </p>
                   </div>
                 </div>
 
                 {/* Messages */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div className="flex flex-1 flex-col gap-3 overflow-y-auto p-6">
                   {messages.length === 0
                     ? (
-                      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <p style={{ color: '#999999', fontSize: '14px' }}>No messages yet. Say hello!</p>
+                      <div className="flex flex-1 items-center justify-center">
+                        <p className="text-[14px] text-text-muted">No messages yet. Say hello!</p>
                       </div>
                     )
                     : messages.map(msg => {
                         const isMe = msg.sender_id === profile.id
                         return (
-                          <div key={msg.id} style={{ display: 'flex', justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
-                            <div style={{
-                              maxWidth: '70%',
-                              background: isMe ? '#1A1A1A' : '#F5EFE6',
-                              color: isMe ? '#FFFFFF' : '#1A1A1A',
-                              padding: '12px 16px',
-                              borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                              fontSize: '14px',
-                              lineHeight: '1.5'
-                            }}>
-                              <p style={{ margin: '0 0 4px' }}>{msg.body}</p>
-                              <p style={{ margin: 0, fontSize: '11px', opacity: 0.6, textAlign: isMe ? 'right' : 'left' }}>
+                          <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[70%] px-4 py-3 text-[14px] leading-relaxed ${isMe ? 'rounded-sm bg-text text-surface' : 'border border-line bg-surface-sunk text-text'}`}>
+                              <p className="m-0 mb-1">{msg.body}</p>
+                              <p className={`m-0 text-[11px] opacity-60 ${isMe ? 'text-right' : 'text-left'}`}>
                                 {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                               </p>
                             </div>
@@ -224,19 +211,19 @@ export default function MessagesPage() {
                 </div>
 
                 {/* Input */}
-                <div style={{ padding: '16px 24px', borderTop: '1px solid #EEE6DA', display: 'flex', gap: '12px', flexShrink: 0 }}>
+                <div className="flex shrink-0 gap-3 border-t border-line px-6 py-4">
                   <input
                     type="text"
                     placeholder="Type a message..."
                     value={newMessage}
                     onChange={e => setNewMessage(e.target.value)}
                     onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                    style={{ flex: 1, padding: '12px 16px', border: '1.5px solid #EEE6DA', borderRadius: '10px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
+                    className="flex-1 border border-line bg-surface-raised px-4 py-3 text-[14px] text-text outline-none focus:border-clay"
                   />
                   <button
                     onClick={handleSend}
                     disabled={sending || !newMessage.trim()}
-                    style={{ background: sending || !newMessage.trim() ? '#EEE6DA' : '#1A1A1A', color: sending || !newMessage.trim() ? '#999999' : '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: sending || !newMessage.trim() ? 'not-allowed' : 'pointer', flexShrink: 0 }}
+                    className={`shrink-0 px-6 py-3 font-display text-[14px] font-bold ${sending || !newMessage.trim() ? 'cursor-not-allowed bg-surface-sunk text-text-muted' : 'bg-text text-surface hover:bg-clay-deep'}`}
                   >
                     {sending ? '...' : 'Send'}
                   </button>

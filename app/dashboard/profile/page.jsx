@@ -3,6 +3,9 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Input from '@/components/Input'
+import Button from '@/components/Button'
 
 export default function ProfilePage() {
   const supabase = createClient()
@@ -80,30 +83,37 @@ export default function ProfilePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
-  return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Back to Dashboard</Link>
-      </div>
+  const fields = [
+    { label: 'Full Name', key: 'full_name', type: 'text', placeholder: 'Your full name' },
+    { label: 'Phone', key: 'phone', type: 'text', placeholder: '+234 800 000 0000' },
+    { label: 'City', key: 'city', type: 'text', placeholder: 'e.g. Lagos' },
+    { label: 'State', key: 'state', type: 'text', placeholder: 'e.g. Lagos State' },
+    { label: 'Address', key: 'address_line', type: 'text', placeholder: 'Your street address' },
+    { label: 'Company Name (optional)', key: 'company_name', type: 'text', placeholder: 'Your business name' },
+    { label: 'Years of Experience', key: 'experience_years', type: 'number', placeholder: 'e.g. 5' },
+  ]
 
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '40px 24px' }}>
-        <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '32px' }}>Edit Profile</h1>
+  return (
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Back to Dashboard</Link>} />
+
+      <div className="mx-auto max-w-[680px] px-6 py-10">
+        <h1 className="mb-8 text-[24px] font-bold">Edit Profile</h1>
 
         {/* Avatar upload */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px', marginBottom: '24px', textAlign: 'center' }}>
+        <div className="ticks mb-6 border border-line bg-surface-raised p-8 text-center">
           <div
             onClick={() => fileInputRef.current?.click()}
-            style={{ width: '88px', height: '88px', borderRadius: '50%', background: '#F5EFE6', border: '2px solid #8B5E3C', margin: '0 auto 20px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+            className="mx-auto mb-5 flex h-[88px] w-[88px] cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 border-clay bg-surface-sunk"
           >
             {profile?.avatar_url
-              ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <span style={{ fontSize: '32px', fontWeight: '800', color: '#8B5E3C' }}>{profile?.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
+              ? <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+              : <span className="font-display text-[32px] font-bold text-clay">{profile?.full_name?.charAt(0)?.toUpperCase() || '?'}</span>
             }
           </div>
 
@@ -112,66 +122,49 @@ export default function ProfilePage() {
             type="file"
             accept="image/jpeg,image/png,image/webp"
             onChange={handleAvatarUpload}
-            style={{ display: 'none' }}
+            className="hidden"
           />
 
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            style={{ background: uploading ? '#EEE6DA' : '#1A1A1A', color: uploading ? '#999999' : '#FFFFFF', border: 'none', padding: '10px 24px', borderRadius: '8px', cursor: uploading ? 'not-allowed' : 'pointer', fontSize: '14px', fontWeight: '700' }}
-          >
+          <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} variant="solid">
             {uploading ? 'Uploading...' : 'Upload Photo'}
-          </button>
-          <p style={{ color: '#999999', fontSize: '12px', marginTop: '8px', marginBottom: 0 }}>JPG, PNG or WebP. Max 5MB.</p>
+          </Button>
+          <p className="mt-2 mb-0 text-[12px] text-text-muted">JPG, PNG or WebP. Max 5MB.</p>
         </div>
 
         {/* Form */}
-        <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px' }}>
-          {[
-            { label: 'Full Name', key: 'full_name', type: 'text', placeholder: 'Your full name' },
-            { label: 'Phone', key: 'phone', type: 'text', placeholder: '+234 800 000 0000' },
-            { label: 'City', key: 'city', type: 'text', placeholder: 'e.g. Lagos' },
-            { label: 'State', key: 'state', type: 'text', placeholder: 'e.g. Lagos State' },
-            { label: 'Address', key: 'address_line', type: 'text', placeholder: 'Your street address' },
-            { label: 'Company Name (optional)', key: 'company_name', type: 'text', placeholder: 'Your business name' },
-            { label: 'Years of Experience', key: 'experience_years', type: 'number', placeholder: 'e.g. 5' },
-          ].map(field => (
-            <div key={field.key} style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>{field.label}</label>
-              <input
+        <div className="ticks border border-line bg-surface-raised p-8">
+          {fields.map(field => (
+            <div key={field.key} className="mb-4">
+              <Input
+                label={field.label}
                 type={field.type}
                 placeholder={field.placeholder}
                 value={profile?.[field.key] || ''}
                 onChange={e => setProfile({ ...profile, [field.key]: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
               />
             </div>
           ))}
 
-          <div style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Bio</label>
+          <div className="mb-6">
+            <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Bio</label>
             <textarea
               value={profile?.bio || ''}
               onChange={e => setProfile({ ...profile, bio: e.target.value })}
               rows={4}
               placeholder="Tell people about yourself and your work..."
-              style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+              className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[0.95rem] text-text outline-none transition-colors focus:border-clay"
             />
           </div>
 
           {message && (
-            <p style={{ color: message.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>
+            <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') ? 'text-danger' : 'text-oasis'}`}>
               {message}
             </p>
           )}
 
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            style={{ width: '100%', background: saving ? '#EEE6DA' : '#1A1A1A', color: saving ? '#999999' : '#FFFFFF', border: 'none', padding: '14px', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: saving ? 'not-allowed' : 'pointer' }}
-          >
+          <Button onClick={handleSave} disabled={saving} className="w-full justify-center">
             {saving ? 'Saving...' : 'Save Profile'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

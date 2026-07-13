@@ -1,16 +1,15 @@
 import Link from 'next/link'
+import MarketingNav from '@/components/MarketingNav'
+import MarketingFooter from '@/components/MarketingFooter'
 
 export default function TermsPage() {
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Back to Home</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <MarketingNav />
 
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '60px 24px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: '800', color: '#1A1A1A', marginBottom: '8px' }}>Terms & Conditions</h1>
-        <p style={{ color: '#999999', fontSize: '14px', marginBottom: '48px' }}>Last updated: June 2026</p>
+      <div className="mx-auto max-w-[680px] px-6 py-16">
+        <h1 className="mb-2 text-[32px] font-bold text-text">Terms &amp; Conditions</h1>
+        <p className="mb-12 text-[14px] text-text-muted">Last updated: June 2026</p>
 
         {[
           {
@@ -66,20 +65,18 @@ export default function TermsPage() {
             body: 'If you have any questions about these Terms and Conditions, please contact us at hello@engediafrica.com or call +234 913 445 9307.'
           },
         ].map(section => (
-          <div key={section.title} style={{ marginBottom: '36px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '700', color: '#1A1A1A', marginBottom: '12px' }}>{section.title}</h2>
-            <p style={{ fontSize: '15px', color: '#666666', lineHeight: '1.8', margin: 0 }}>{section.body}</p>
+          <div key={section.title} className="mb-9">
+            <h2 className="mb-3 text-[18px] font-bold text-text">{section.title}</h2>
+            <p className="m-0 text-[15px] leading-[1.8] text-text-muted">{section.body}</p>
           </div>
         ))}
 
-        <div style={{ borderTop: '1.5px solid #EEE6DA', paddingTop: '32px', marginTop: '48px' }}>
-          <Link href="/privacy-policy" style={{ color: '#8B5E3C', fontWeight: '600', textDecoration: 'none', fontSize: '14px' }}>Read our Privacy Policy →</Link>
+        <div className="mt-12 border-t border-line pt-8">
+          <Link href="/privacy-policy" className="text-[14px] font-semibold text-clay no-underline">Read our Privacy Policy →</Link>
         </div>
       </div>
 
-      <div style={{ background: '#1A1A1A', borderTop: '3px solid #8B5E3C', padding: '32px 24px', textAlign: 'center' }}>
-        <p style={{ color: '#999999', fontSize: '14px', margin: 0 }}>© 2026 EnGedi Africa. hello@engediafrica.com</p>
-      </div>
+      <MarketingFooter />
     </div>
   )
 }

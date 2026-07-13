@@ -3,18 +3,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-
-const statusColors = {
-  requested: { bg: '#FFF8F0', border: '#8B5E3C', color: '#8B5E3C' },
-  countered: { bg: '#FFF8F0', border: '#F59E0B', color: '#F59E0B' },
-  declined: { bg: '#fde8e8', border: '#c0392b', color: '#c0392b' },
-  cancelled: { bg: '#F9F6F1', border: '#999999', color: '#999999' },
-  accepted: { bg: '#EEF2FF', border: '#6366F1', color: '#6366F1' },
-  paid: { bg: '#EEF2FF', border: '#6366F1', color: '#6366F1' },
-  completed_by_provider: { bg: '#FFF8F0', border: '#F59E0B', color: '#F59E0B' },
-  completed: { bg: '#e8f8f0', border: '#2ecc71', color: '#27ae60' },
-  disputed: { bg: '#fde8e8', border: '#c0392b', color: '#c0392b' },
-}
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
 
 const statusLabels = {
   requested: 'Awaiting response',
@@ -26,6 +17,13 @@ const statusLabels = {
   completed_by_provider: 'Marked done',
   completed: 'Completed',
   disputed: 'Disputed',
+}
+
+const statusTone = (status) => {
+  if (status === 'completed') return 'success'
+  if (status === 'declined' || status === 'disputed' || status === 'cancelled') return 'danger'
+  if (status === 'requested' || status === 'countered' || status === 'accepted' || status === 'paid' || status === 'completed_by_provider') return 'pending'
+  return 'neutral'
 }
 
 const statusSteps = ['requested', 'accepted', 'paid', 'completed_by_provider', 'completed']
@@ -296,83 +294,83 @@ export default function BookingsPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading bookings...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading bookings...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
       {/* Respond modal (accept / decline / counter) */}
       {respondBooking && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#00000088', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-6">
+          <div className="ticks w-full max-w-[480px] border border-line bg-surface-raised p-8">
+            <h3 className="m-0 mb-2 text-[18px] font-bold text-text">
               {respondMode === 'accept' && 'Accept Request'}
               {respondMode === 'decline' && 'Decline Request'}
               {respondMode === 'counter' && 'Send Counter-Offer'}
             </h3>
-            <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 24px' }}>{respondBooking.job_title}</p>
+            <p className="m-0 mb-6 text-[14px] text-text-muted">{respondBooking.job_title}</p>
 
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
+            <div className="mb-5 flex gap-2">
               {['accept', 'counter', 'decline'].map(m => (
                 <button key={m} onClick={() => setRespondMode(m)}
-                  style={{ flex: 1, padding: '8px', borderRadius: '8px', border: `1.5px solid ${respondMode === m ? '#1A1A1A' : '#EEE6DA'}`, background: respondMode === m ? '#1A1A1A' : '#FFFFFF', color: respondMode === m ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '12px', cursor: 'pointer', textTransform: 'capitalize' }}>
+                  className={`flex-1 border py-2 text-[12px] font-bold capitalize ${respondMode === m ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}>
                   {m === 'counter' ? 'Counter' : m}
                 </button>
               ))}
             </div>
 
             {respondMode === 'accept' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Your price (₦)</label>
+              <div className="mb-5">
+                <label className="mb-1.5 block text-[13px] font-semibold text-text">Your price (₦)</label>
                 <input type="number" value={respondPrice} onChange={e => setRespondPrice(e.target.value)}
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                  className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
               </div>
             )}
 
             {respondMode === 'decline' && (
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Reason (optional)</label>
+              <div className="mb-5">
+                <label className="mb-1.5 block text-[13px] font-semibold text-text">Reason (optional)</label>
                 <textarea value={respondReason} onChange={e => setRespondReason(e.target.value)} rows={3}
                   placeholder="Let them know why..."
-                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+                  className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
               </div>
             )}
 
             {respondMode === 'counter' && (
               <>
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Your price (₦)</label>
+                <div className="mb-3.5">
+                  <label className="mb-1.5 block text-[13px] font-semibold text-text">Your price (₦)</label>
                   <input type="number" value={counterPrice} onChange={e => setCounterPrice(e.target.value)}
-                    style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
                 </div>
-                <div style={{ marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Proposed date</label>
+                <div className="mb-3.5">
+                  <label className="mb-1.5 block text-[13px] font-semibold text-text">Proposed date</label>
                   <input type="date" value={counterDate} onChange={e => setCounterDate(e.target.value)}
-                    style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+                    className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
                 </div>
-                <div style={{ marginBottom: '20px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Note (optional)</label>
+                <div className="mb-5">
+                  <label className="mb-1.5 block text-[13px] font-semibold text-text">Note (optional)</label>
                   <textarea value={counterNote} onChange={e => setCounterNote(e.target.value)} rows={2}
-                    style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+                    className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
                 </div>
               </>
             )}
 
-            {message && <p style={{ color: '#c0392b', fontSize: '13px', marginBottom: '12px' }}>{message}</p>}
+            {message && <p className="mb-3 text-[13px] text-danger">{message}</p>}
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={closeRespond} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={submitRespond} disabled={submittingRespond}
-                style={{ flex: 2, background: respondMode === 'decline' ? '#c0392b' : '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={closeRespond}>Cancel</Button>
+              <Button
+                className={`flex-[2] justify-center ${respondMode === 'decline' ? 'border-danger bg-danger text-clay-contrast hover:bg-danger' : ''}`}
+                disabled={submittingRespond}
+                onClick={submitRespond}
+              >
                 {submittingRespond ? 'Sending...' : respondMode === 'accept' ? 'Accept' : respondMode === 'decline' ? 'Decline' : 'Send Counter-Offer'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -380,119 +378,114 @@ export default function BookingsPage() {
 
       {/* Dispute modal */}
       {disputeBooking && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#00000088', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
-          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Raise a Dispute</h3>
-            <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 24px' }}>{disputeBooking.job_title}</p>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Describe the issue</label>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-6">
+          <div className="ticks w-full max-w-[480px] border border-line bg-surface-raised p-8">
+            <h3 className="m-0 mb-2 text-[18px] font-bold text-text">Raise a Dispute</h3>
+            <p className="m-0 mb-6 text-[14px] text-text-muted">{disputeBooking.job_title}</p>
+            <div className="mb-5">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Describe the issue</label>
               <textarea
                 value={disputeReason}
                 onChange={e => setDisputeReason(e.target.value)}
                 rows={4}
                 placeholder="What went wrong? Be as specific as possible..."
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
               />
             </div>
-            <div style={{ background: '#FFF8F0', border: '1px solid #8B5E3C', borderRadius: '8px', padding: '12px', marginBottom: '20px' }}>
-              <p style={{ margin: 0, fontSize: '13px', color: '#8B5E3C', lineHeight: '1.6' }}>
-                ⚠️ Raising a dispute will freeze the payment until our team reviews the issue. We aim to resolve disputes within 24-48 hours.
+            <div className="mb-5 border border-clay bg-surface-sunk p-3">
+              <p className="m-0 text-[13px] leading-relaxed text-clay">
+                Raising a dispute will freeze the payment until our team reviews the issue. We aim to resolve disputes within 24-48 hours.
               </p>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => { setDisputeBooking(null); setDisputeReason('') }} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleRaiseDispute} disabled={submittingDispute} style={{ flex: 2, background: '#c0392b', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={() => { setDisputeBooking(null); setDisputeReason('') }}>Cancel</Button>
+              <Button className="flex-[2] justify-center border-danger bg-danger text-clay-contrast hover:bg-danger" disabled={submittingDispute} onClick={handleRaiseDispute}>
                 {submittingDispute ? 'Submitting...' : 'Submit Dispute'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Bookings</h1>
-          <p style={{ color: '#666666', fontSize: '15px', margin: 0 }}>Track job requests, quotes, and payments</p>
+      <div className="mx-auto max-w-[900px] px-6 py-10">
+        <div className="mb-8">
+          <h1 className="m-0 mb-2 text-[26px] font-bold text-text">Bookings</h1>
+          <p className="m-0 text-[15px] text-text-muted">Track job requests, quotes, and payments</p>
         </div>
 
         {activeTab === 'providing' && !profile?.bank_account_name && (
-          <div style={{ background: '#FFF8F0', border: '1.5px solid #8B5E3C', borderRadius: '12px', padding: '20px', marginBottom: '24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border border-clay bg-surface-sunk p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px', fontSize: '15px' }}>⚠️ Add your bank details</p>
-              <p style={{ color: '#666666', fontSize: '13px', margin: 0 }}>You need to add your bank account to receive payments when jobs are confirmed.</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-text">Add your bank details</p>
+              <p className="m-0 text-[13px] text-text-muted">You need to add your bank account to receive payments when jobs are confirmed.</p>
             </div>
-            <Link href="/dashboard/bank-details" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Add Now</Link>
+            <Button href="/dashboard/bank-details" className="text-[13px]">Add Now</Button>
           </div>
         )}
 
-        <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+        <div className="mb-6 flex gap-2">
           {[
-            { key: 'requesting', label: '📋 My Requests' },
-            { key: 'providing', label: '🛠 Requests Received' },
+            { key: 'requesting', label: 'My Requests' },
+            { key: 'providing', label: 'Requests Received' },
           ].map(tab => (
             <button key={tab.key} onClick={() => handleTabChange(tab.key)}
-              style={{ padding: '10px 24px', borderRadius: '8px', border: `1.5px solid ${activeTab === tab.key ? '#1A1A1A' : '#EEE6DA'}`, background: activeTab === tab.key ? '#1A1A1A' : '#FFFFFF', color: activeTab === tab.key ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+              className={`border px-6 py-2.5 text-[14px] font-bold ${activeTab === tab.key ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}>
               {tab.label}
             </button>
           ))}
         </div>
 
-        {message && <p style={{ color: message.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
+        {message && <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{message}</p>}
 
         {bookings.length === 0 ? (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '60px', textAlign: 'center' }}>
-            <p style={{ color: '#999999', fontSize: '15px', margin: '0 0 8px', fontWeight: '600' }}>No bookings yet</p>
-            <p style={{ color: '#999999', fontSize: '13px', margin: '0 0 20px' }}>
+          <div className="border border-line bg-surface-raised p-16 text-center">
+            <p className="m-0 mb-2 text-[15px] font-bold text-text-muted">No bookings yet</p>
+            <p className="m-0 mb-5 text-[13px] text-text-muted">
               {activeTab === 'requesting' ? 'Visit an artisan, professional, or service provider\'s profile to request a quote' : 'Requests from clients will appear here'}
             </p>
             {activeTab === 'requesting' && (
-              <Link href="/browse" style={{ background: '#1A1A1A', color: '#FFFFFF', textDecoration: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px' }}>
-                Browse Providers
-              </Link>
+              <Button href="/browse">Browse Providers</Button>
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="flex flex-col gap-4">
             {bookings.map(booking => {
-              const statusStyle = statusColors[booking.status] || statusColors.requested
               const currentStep = statusSteps.indexOf(booking.status)
               const showProgress = statusSteps.includes(booking.status)
               const isPaid = booking.payment_status === 'paid'
               const isReleased = booking.escrow_released
 
               return (
-                <div key={booking.id} style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px' }}>
+                <div key={booking.id} className="ticks border border-line bg-surface-raised p-6">
 
                   {/* Header */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '20px' }}>
+                  <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
                     <div>
-                      <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px' }}>{booking.job_title}</h3>
-                      {booking.location && <p style={{ fontSize: '13px', color: '#666666', margin: '0 0 4px' }}>📍 {booking.location}{booking.preferred_date ? ` · ${new Date(booking.preferred_date).toLocaleDateString()}` : ''}</p>}
-                      <p style={{ fontSize: '12px', color: '#999999', margin: 0 }}>Booking #{booking.id.substring(0, 8)} · {new Date(booking.created_at).toLocaleDateString()}</p>
+                      <h3 className="m-0 mb-1 text-[16px] font-bold text-text">{booking.job_title}</h3>
+                      {booking.location && <p className="m-0 mb-1 text-[13px] text-text-muted">{booking.location}{booking.preferred_date ? ` · ${new Date(booking.preferred_date).toLocaleDateString()}` : ''}</p>}
+                      <p className="m-0 font-mono text-[12px] text-text-muted">Booking #{booking.id.substring(0, 8)} · {new Date(booking.created_at).toLocaleDateString()}</p>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
+                    <div className="text-right">
                       {(booking.quoted_price || booking.budget) && (
-                        <p style={{ margin: '0 0 6px', fontWeight: '800', fontSize: '18px', color: '#1A1A1A' }}>₦{Number(booking.quoted_price || booking.budget).toLocaleString()}</p>
+                        <p className="m-0 mb-1.5 font-mono text-[18px] font-bold tabular-nums text-text">₦{Number(booking.quoted_price || booking.budget).toLocaleString()}</p>
                       )}
-                      <span style={{ background: statusStyle.bg, border: `1px solid ${statusStyle.border}`, color: statusStyle.color, fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>
-                        {statusLabels[booking.status] || booking.status}
-                      </span>
+                      <Badge tone={statusTone(booking.status)}>{statusLabels[booking.status] || booking.status}</Badge>
                     </div>
                   </div>
 
                   {/* Escrow status */}
                   {(isPaid || booking.status === 'completed') && (
-                    <div style={{ background: isReleased ? '#e8f8f0' : '#EEF2FF', border: `1px solid ${isReleased ? '#2ecc71' : '#6366F1'}`, borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
-                      <p style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: isReleased ? '#27ae60' : '#6366F1' }}>
-                        {isReleased ? '✓ Payment released to provider' : '🔒 Payment held in escrow — waiting for job confirmation'}
+                    <div className={`mb-4 border p-4 ${isReleased ? 'border-oasis bg-oasis-soft' : 'border-line-strong bg-surface-sunk'}`}>
+                      <p className={`m-0 text-[13px] font-bold ${isReleased ? 'text-oasis' : 'text-text'}`}>
+                        {isReleased ? '✓ Payment released to provider' : 'Payment held in escrow — waiting for job confirmation'}
                       </p>
                       {isPaid && !isReleased && booking.payout_amount && (
-                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#666666' }}>
+                        <p className="m-0 mt-1 text-[12px] text-text-muted">
                           Provider will receive ₦{Number(booking.payout_amount).toLocaleString()} after confirmation ({Math.round((booking.commission_rate || 0.12) * 100)}% platform fee deducted)
                         </p>
                       )}
                       {isPaid && !isReleased && booking.auto_confirm_at && (
-                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#666666' }}>
+                        <p className="m-0 mt-1 text-[12px] text-text-muted">
                           Auto-confirms on {new Date(booking.auto_confirm_at).toLocaleDateString()} if no dispute is raised
                         </p>
                       )}
@@ -501,21 +494,21 @@ export default function BookingsPage() {
 
                   {/* Progress tracker */}
                   {showProgress && (
-                    <div style={{ marginBottom: '20px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div className="mb-5">
+                      <div className="flex items-center">
                         {statusSteps.map((step, i) => (
-                          <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < statusSteps.length - 1 ? 1 : 0 }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                              <div style={{ width: '26px', height: '26px', borderRadius: '50%', background: i <= currentStep ? '#1A1A1A' : '#EEE6DA', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div key={step} className={`flex items-center ${i < statusSteps.length - 1 ? 'flex-1' : ''}`}>
+                            <div className="flex flex-col items-center">
+                              <div className={`flex h-6 w-6 shrink-0 items-center justify-center border ${i <= currentStep ? 'border-text bg-text' : 'border-line-strong bg-surface-raised'}`}>
                                 {i <= currentStep
-                                  ? <span style={{ color: '#FFFFFF', fontSize: '11px', fontWeight: '800' }}>✓</span>
-                                  : <span style={{ color: '#999999', fontSize: '10px', fontWeight: '700' }}>{i + 1}</span>
+                                  ? <span className="text-[11px] font-bold text-surface">✓</span>
+                                  : <span className="font-mono text-[10px] font-bold text-text-muted">{i + 1}</span>
                                 }
                               </div>
-                              <p style={{ fontSize: '10px', color: i <= currentStep ? '#1A1A1A' : '#999999', fontWeight: i <= currentStep ? '700' : '400', margin: '4px 0 0', textTransform: 'capitalize', whiteSpace: 'nowrap' }}>{step.replace(/_/g, ' ')}</p>
+                              <p className={`mb-4 mt-1 whitespace-nowrap text-[10px] capitalize ${i <= currentStep ? 'font-bold text-text' : 'text-text-muted'}`}>{step.replace(/_/g, ' ')}</p>
                             </div>
                             {i < statusSteps.length - 1 && (
-                              <div style={{ flex: 1, height: '2px', background: i < currentStep ? '#1A1A1A' : '#EEE6DA', margin: '0 4px', marginBottom: '16px' }}></div>
+                              <div className={`mx-1 mb-4 h-px flex-1 ${i < currentStep ? 'bg-text' : 'bg-line-strong'}`}></div>
                             )}
                           </div>
                         ))}
@@ -524,116 +517,99 @@ export default function BookingsPage() {
                   )}
 
                   {/* Details */}
-                  <div style={{ background: '#F9F6F1', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                  <div className="mb-4 border border-line bg-surface-sunk p-3.5">
                     {activeTab === 'requesting' ? (
-                      <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>
-                        <strong style={{ color: '#1A1A1A' }}>Provider:</strong> {booking.provider?.company_name || booking.provider?.full_name} · {booking.provider?.city}
+                      <p className="m-0 text-[13px] text-text-muted">
+                        <strong className="text-text">Provider:</strong> {booking.provider?.company_name || booking.provider?.full_name} · {booking.provider?.city}
                       </p>
                     ) : (
-                      <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>
-                        <strong style={{ color: '#1A1A1A' }}>Client:</strong> {booking.project_owner?.full_name} · {booking.project_owner?.city} · {booking.project_owner?.phone}
+                      <p className="m-0 text-[13px] text-text-muted">
+                        <strong className="text-text">Client:</strong> {booking.project_owner?.full_name} · {booking.project_owner?.city} · {booking.project_owner?.phone}
                       </p>
                     )}
-                    {booking.job_description && <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#666666' }}><strong style={{ color: '#1A1A1A' }}>Job:</strong> {booking.job_description}</p>}
-                    {booking.budget && <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#666666' }}><strong style={{ color: '#1A1A1A' }}>Budget:</strong> ₦{Number(booking.budget).toLocaleString()}</p>}
+                    {booking.job_description && <p className="m-0 mt-1.5 text-[13px] text-text-muted"><strong className="text-text">Job:</strong> {booking.job_description}</p>}
+                    {booking.budget && <p className="m-0 mt-1.5 text-[13px] text-text-muted"><strong className="text-text">Budget:</strong> ₦{Number(booking.budget).toLocaleString()}</p>}
                   </div>
 
                   {/* Counter-offer banner */}
                   {booking.status === 'countered' && (
-                    <div style={{ background: '#FFF8F0', border: '1px solid #F59E0B', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
-                      <p style={{ margin: '0 0 4px', fontSize: '13px', fontWeight: '700', color: '#8B5E3C' }}>
+                    <div className="mb-4 border border-clay bg-surface-sunk p-3.5">
+                      <p className="m-0 mb-1 text-[13px] font-bold text-clay">
                         {activeTab === 'requesting' ? 'Provider countered with:' : 'You countered with:'}
                       </p>
-                      <p style={{ margin: 0, fontSize: '14px', color: '#1A1A1A', fontWeight: '600' }}>
+                      <p className="m-0 text-[14px] font-semibold text-text">
                         ₦{Number(booking.counter_price).toLocaleString()}{booking.counter_date ? ` · ${new Date(booking.counter_date).toLocaleDateString()}` : ''}
                       </p>
-                      {booking.counter_note && <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#666666' }}>{booking.counter_note}</p>}
+                      {booking.counter_note && <p className="m-0 mt-1 text-[13px] text-text-muted">{booking.counter_note}</p>}
                     </div>
                   )}
 
                   {booking.status === 'declined' && booking.decline_reason && (
-                    <div style={{ background: '#fde8e8', border: '1px solid #c0392b', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
-                      <p style={{ margin: 0, fontSize: '13px', color: '#c0392b' }}><strong>Reason:</strong> {booking.decline_reason}</p>
+                    <div className="mb-4 border border-danger bg-danger-soft p-3.5">
+                      <p className="m-0 text-[13px] text-danger"><strong>Reason:</strong> {booking.decline_reason}</p>
                     </div>
                   )}
 
                   {/* Requesting (owner) actions */}
                   {activeTab === 'requesting' && (
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <div className="flex flex-wrap gap-2.5">
                       {booking.status === 'requested' && (
-                        <button onClick={() => handleCancelBooking(booking)} disabled={updating === booking.id}
-                          style={{ background: '#FFFFFF', color: '#666666', border: '1.5px solid #EEE6DA', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                        <Button variant="outline" disabled={updating === booking.id} onClick={() => handleCancelBooking(booking)}>
                           {updating === booking.id ? 'Cancelling...' : 'Cancel Request'}
-                        </button>
+                        </Button>
                       )}
                       {booking.status === 'countered' && (
                         <>
-                          <button onClick={() => handleOwnerAcceptCounter(booking)} disabled={updating === booking.id}
-                            style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                          <Button disabled={updating === booking.id} onClick={() => handleOwnerAcceptCounter(booking)}>
                             Accept ₦{Number(booking.counter_price).toLocaleString()}
-                          </button>
-                          <button onClick={() => handleOwnerDeclineCounter(booking)} disabled={updating === booking.id}
-                            style={{ background: '#fde8e8', color: '#c0392b', border: '1px solid #c0392b', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                          </Button>
+                          <Button variant="outline" className="border-danger text-danger hover:bg-danger-soft" disabled={updating === booking.id} onClick={() => handleOwnerDeclineCounter(booking)}>
                             Decline
-                          </button>
+                          </Button>
                         </>
                       )}
                       {booking.status === 'accepted' && (
-                        <button onClick={() => handlePayForBooking(booking)} disabled={payingBooking === booking.id}
-                          style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                        <Button disabled={payingBooking === booking.id} onClick={() => handlePayForBooking(booking)}>
                           {payingBooking === booking.id ? 'Opening payment...' : `Pay ₦${Number(booking.quoted_price).toLocaleString()}`}
-                        </button>
+                        </Button>
                       )}
                       {booking.status === 'completed_by_provider' && (
                         <>
-                          <button onClick={() => handleConfirmCompletion(booking)} disabled={updating === booking.id}
-                            style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                          <Button disabled={updating === booking.id} onClick={() => handleConfirmCompletion(booking)}>
                             {updating === booking.id ? 'Confirming...' : '✓ Confirm Job Was Completed'}
-                          </button>
-                          <button onClick={() => setDisputeBooking(booking)}
-                            style={{ background: '#fde8e8', color: '#c0392b', border: '1px solid #c0392b', padding: '12px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                          </Button>
+                          <Button variant="outline" className="border-danger text-danger hover:bg-danger-soft" onClick={() => setDisputeBooking(booking)}>
                             Raise Dispute
-                          </button>
+                          </Button>
                         </>
                       )}
                       {booking.status === 'completed' && (
-                        <Link href={`/${booking.provider?.role === 'artisan' ? 'artisans' : booking.provider?.role === 'professional' ? 'professionals' : 'service-providers'}/${booking.provider_id}`}
-                          style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px' }}>
+                        <Button href={`/${booking.provider?.role === 'artisan' ? 'artisans' : booking.provider?.role === 'professional' ? 'professionals' : 'service-providers'}/${booking.provider_id}`}>
                           Leave a Review
-                        </Link>
+                        </Button>
                       )}
                     </div>
                   )}
 
                   {/* Providing actions */}
                   {activeTab === 'providing' && (
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                    <div className="flex flex-wrap gap-2.5">
                       {booking.status === 'requested' && (
                         <>
-                          <button onClick={() => openRespond(booking, 'accept')}
-                            style={{ background: '#2ecc71', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                            Accept
-                          </button>
-                          <button onClick={() => openRespond(booking, 'counter')}
-                            style={{ background: '#F59E0B', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                            Counter-Offer
-                          </button>
-                          <button onClick={() => openRespond(booking, 'decline')}
-                            style={{ background: '#fde8e8', color: '#c0392b', border: '1px solid #c0392b', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
-                            Decline
-                          </button>
+                          <Button className="text-[13px]" onClick={() => openRespond(booking, 'accept')}>Accept</Button>
+                          <Button variant="outline" className="text-[13px]" onClick={() => openRespond(booking, 'counter')}>Counter-Offer</Button>
+                          <Button variant="outline" className="border-danger text-[13px] text-danger hover:bg-danger-soft" onClick={() => openRespond(booking, 'decline')}>Decline</Button>
                         </>
                       )}
                       {booking.status === 'paid' && (
-                        <button onClick={() => handleMarkJobDone(booking)} disabled={updating === booking.id}
-                          style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                        <Button className="text-[13px]" disabled={updating === booking.id} onClick={() => handleMarkJobDone(booking)}>
                           {updating === booking.id ? 'Updating...' : 'Mark Job as Done'}
-                        </button>
+                        </Button>
                       )}
                       {!booking.provider?.bank_account_name && booking.payment_status === 'paid' && (
-                        <Link href="/dashboard/bank-details" style={{ background: '#FFF8F0', color: '#8B5E3C', border: '1px solid #8B5E3C', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', textDecoration: 'none' }}>
+                        <Button href="/dashboard/bank-details" variant="outline" className="border-clay text-[13px] text-clay hover:bg-surface-sunk">
                           Add Bank Details to Receive Payment
-                        </Link>
+                        </Button>
                       )}
                     </div>
                   )}

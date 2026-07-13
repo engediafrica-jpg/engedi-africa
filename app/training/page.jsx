@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
 
 const modules = [
   {
@@ -161,56 +164,52 @@ export default function TrainingPage() {
   const allCompleted = completedModules.length === modules.length
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
+      <div className="mx-auto max-w-[900px] px-6 py-10">
 
         {/* Header */}
-        <div style={{ background: '#1A1A1A', borderRadius: '16px', padding: '32px', marginBottom: '24px', position: 'relative', overflow: 'hidden' }}>
-          <div style={{ position: 'absolute', top: 0, right: 0, width: '200px', height: '100%', background: 'linear-gradient(to left, #8B5E3C22, transparent)' }}></div>
-          <h1 style={{ fontSize: '26px', fontWeight: '800', color: '#FFFFFF', margin: '0 0 8px' }}>EnGedi Training Hub</h1>
-          <p style={{ color: '#999999', fontSize: '15px', margin: '0 0 20px', lineHeight: '1.6' }}>
-            Complete all 5 modules and pass the quizzes to earn your <strong style={{ color: '#8B5E3C' }}>EnGedi Certified Professional</strong> badge.
+        <div className="mb-6 border border-clay-deep bg-ink p-8">
+          <h1 className="m-0 mb-2 text-[26px] font-bold text-ink-text">EnGedi Training Hub</h1>
+          <p className="m-0 mb-5 text-[15px] leading-relaxed text-ink-muted">
+            Complete all 5 modules and pass the quizzes to earn your <strong className="text-clay">EnGedi Certified Professional</strong> badge.
           </p>
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <div style={{ background: '#FFFFFF22', borderRadius: '10px', padding: '12px 20px' }}>
-              <p style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: '#FFFFFF' }}>{completedModules.length}/{modules.length}</p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#999999' }}>Modules completed</p>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="border border-line-strong px-5 py-3">
+              <p className="m-0 font-mono text-[22px] font-bold tabular-nums text-ink-text">{completedModules.length}/{modules.length}</p>
+              <p className="m-0 text-[12px] text-ink-muted">Modules completed</p>
             </div>
             {allCompleted && (
-              <div style={{ background: '#2ecc71', borderRadius: '10px', padding: '12px 20px' }}>
-                <p style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: '#FFFFFF' }}>🏆 EnGedi Certified!</p>
-                <p style={{ margin: 0, fontSize: '12px', color: '#FFFFFF99' }}>All modules passed</p>
+              <div className="border border-oasis bg-oasis-soft px-5 py-3">
+                <p className="m-0 text-[14px] font-bold text-oasis">EnGedi Certified!</p>
+                <p className="m-0 text-[12px] text-oasis">All modules passed</p>
               </div>
             )}
           </div>
 
           {/* Progress bar */}
-          <div style={{ marginTop: '20px', background: '#FFFFFF22', borderRadius: '20px', height: '8px', overflow: 'hidden' }}>
-            <div style={{ background: '#8B5E3C', height: '100%', borderRadius: '20px', width: `${(completedModules.length / modules.length) * 100}%`, transition: 'width 0.3s' }}></div>
+          <div className="mt-5 h-2 overflow-hidden bg-line-strong">
+            <div className="h-full bg-clay transition-[width] duration-300" style={{ width: `${(completedModules.length / modules.length) * 100}%` }}></div>
           </div>
         </div>
 
         {/* Tabs */}
         {activeModule && (
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+          <div className="mb-6 flex gap-2">
             {['modules', 'content', 'quiz'].map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                style={{ padding: '10px 20px', borderRadius: '8px', border: `1.5px solid ${tab === t ? '#1A1A1A' : '#EEE6DA'}`, background: tab === t ? '#1A1A1A' : '#FFFFFF', color: tab === t ? '#FFFFFF' : '#666666', fontWeight: '700', fontSize: '13px', cursor: 'pointer', textTransform: 'capitalize' }}
+                className={`border px-5 py-2.5 text-[13px] font-bold capitalize ${tab === t ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}
               >
-                {t === 'modules' ? '← All Modules' : t === 'content' ? '📖 Read' : '✏️ Quiz'}
+                {t === 'modules' ? '← All Modules' : t === 'content' ? 'Read' : 'Quiz'}
               </button>
             ))}
           </div>
@@ -218,33 +217,34 @@ export default function TrainingPage() {
 
         {/* Modules list */}
         {(!activeModule || tab === 'modules') && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          <div className="flex flex-col gap-4">
             {modules.map((mod, index) => {
               const isCompleted = completedModules.includes(mod.id)
               const isLocked = index > 0 && !completedModules.includes(modules[index - 1].id)
               return (
                 <div
                   key={mod.id}
-                  style={{ background: '#FFFFFF', border: `1.5px solid ${isCompleted ? '#2ecc71' : '#EEE6DA'}`, borderRadius: '16px', padding: '24px', opacity: isLocked ? 0.6 : 1 }}
+                  className={`border p-6 ${isCompleted ? 'border-oasis' : 'border-line'} bg-surface-raised ${isLocked ? 'opacity-60' : ''}`}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                        <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>{mod.category}</span>
-                        <span style={{ color: '#999999', fontSize: '12px' }}>{mod.duration}</span>
-                        {isCompleted && <span style={{ background: '#e8f8f0', border: '1px solid #2ecc71', color: '#27ae60', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>✓ Completed</span>}
-                        {isLocked && <span style={{ background: '#F5EFE6', color: '#999999', fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '20px' }}>🔒 Complete previous module first</span>}
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <Badge tone="pending">{mod.category}</Badge>
+                        <span className="text-[12px] text-text-muted">{mod.duration}</span>
+                        {isCompleted && <Badge tone="success">Completed</Badge>}
+                        {isLocked && <Badge tone="neutral">Complete previous module first</Badge>}
                       </div>
-                      <h3 style={{ fontSize: '17px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 6px' }}>Module {mod.id}: {mod.title}</h3>
-                      <p style={{ fontSize: '14px', color: '#666666', margin: 0, lineHeight: '1.5' }}>{mod.desc}</p>
+                      <h3 className="m-0 mb-1.5 text-[17px] font-bold text-text">Module {mod.id}: {mod.title}</h3>
+                      <p className="m-0 text-[14px] leading-relaxed text-text-muted">{mod.desc}</p>
                     </div>
                     {!isLocked && (
-                      <button
+                      <Button
+                        variant={isCompleted ? 'outline' : 'solid'}
+                        className={`shrink-0 ${isCompleted ? 'border-oasis text-oasis hover:bg-oasis-soft' : ''}`}
                         onClick={() => { setActiveModule(mod); setQuizState(mod); setTab('content') }}
-                        style={{ background: isCompleted ? '#e8f8f0' : '#1A1A1A', color: isCompleted ? '#27ae60' : '#FFFFFF', border: isCompleted ? '1.5px solid #2ecc71' : 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', flexShrink: 0 }}
                       >
                         {isCompleted ? 'Review' : 'Start'}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -255,48 +255,43 @@ export default function TrainingPage() {
 
         {/* Module content */}
         {activeModule && tab === 'content' && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px' }}>
-            <div style={{ marginBottom: '24px' }}>
-              <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px' }}>{activeModule.category}</span>
-              <h2 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A1A', margin: '12px 0 8px' }}>Module {activeModule.id}: {activeModule.title}</h2>
-              <p style={{ color: '#666666', fontSize: '14px', margin: 0 }}>{activeModule.duration}</p>
+          <div className="border border-line bg-surface-raised p-8">
+            <div className="mb-6">
+              <Badge tone="pending">{activeModule.category}</Badge>
+              <h2 className="m-0 mb-2 mt-3 text-[22px] font-bold text-text">Module {activeModule.id}: {activeModule.title}</h2>
+              <p className="m-0 text-[14px] text-text-muted">{activeModule.duration}</p>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '32px' }}>
+            <div className="mb-8 flex flex-col gap-6">
               {activeModule.content.map((section, i) => (
-                <div key={i} style={{ paddingLeft: '20px', borderLeft: '3px solid #8B5E3C' }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 8px' }}>{section.heading}</h3>
-                  <p style={{ fontSize: '15px', color: '#666666', margin: 0, lineHeight: '1.8' }}>{section.body}</p>
+                <div key={i} className="border-l-2 border-clay pl-5">
+                  <h3 className="m-0 mb-2 text-[16px] font-bold text-text">{section.heading}</h3>
+                  <p className="m-0 text-[15px] leading-[1.8] text-text-muted">{section.body}</p>
                 </div>
               ))}
             </div>
 
-            <button
-              onClick={() => startQuiz(activeModule)}
-              style={{ width: '100%', background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}
-            >
-              Take the Quiz →
-            </button>
+            <Button className="w-full justify-center" onClick={() => startQuiz(activeModule)}>Take the Quiz →</Button>
           </div>
         )}
 
         {/* Quiz */}
         {activeModule && tab === 'quiz' && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '32px' }}>
-            <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Quiz: {activeModule.title}</h2>
-            <p style={{ color: '#666666', fontSize: '14px', margin: '0 0 32px' }}>Answer all questions. You need 70% to pass and earn your certificate.</p>
+          <div className="border border-line bg-surface-raised p-8">
+            <h2 className="m-0 mb-2 text-[20px] font-bold text-text">Quiz: {activeModule.title}</h2>
+            <p className="m-0 mb-8 text-[14px] text-text-muted">Answer all questions. You need 70% to pass and earn your certificate.</p>
 
             {!quizSubmitted ? (
               <div>
                 {activeModule.quiz.map((q, qi) => (
-                  <div key={qi} style={{ marginBottom: '28px' }}>
-                    <p style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 12px' }}>{qi + 1}. {q.question}</p>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div key={qi} className="mb-7">
+                    <p className="m-0 mb-3 text-[15px] font-bold text-text">{qi + 1}. {q.question}</p>
+                    <div className="flex flex-col gap-2">
                       {q.options.map((opt, oi) => (
                         <div
                           key={oi}
                           onClick={() => setQuizAnswers({ ...quizAnswers, [qi]: oi })}
-                          style={{ padding: '12px 16px', border: `1.5px solid ${quizAnswers[qi] === oi ? '#8B5E3C' : '#EEE6DA'}`, borderRadius: '10px', cursor: 'pointer', background: quizAnswers[qi] === oi ? '#F5EFE6' : '#FFFFFF', fontSize: '14px', color: '#1A1A1A' }}
+                          className={`cursor-pointer border px-4 py-3 text-[14px] text-text ${quizAnswers[qi] === oi ? 'border-clay bg-surface-sunk' : 'border-line hover:border-line-strong'}`}
                         >
                           {opt}
                         </div>
@@ -305,44 +300,41 @@ export default function TrainingPage() {
                   </div>
                 ))}
 
-                <button
-                  onClick={handleSubmitQuiz}
+                <Button
+                  className="w-full justify-center"
                   disabled={Object.keys(quizAnswers).length < activeModule.quiz.length}
-                  style={{ width: '100%', background: Object.keys(quizAnswers).length < activeModule.quiz.length ? '#EEE6DA' : '#1A1A1A', color: Object.keys(quizAnswers).length < activeModule.quiz.length ? '#999999' : '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: Object.keys(quizAnswers).length < activeModule.quiz.length ? 'not-allowed' : 'pointer' }}
+                  onClick={handleSubmitQuiz}
                 >
                   Submit Quiz
-                </button>
+                </Button>
               </div>
             ) : (
-              <div style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: '64px', marginBottom: '16px' }}>
-                  {quizScore >= Math.ceil(activeModule.quiz.length * 0.7) ? '🏆' : '📚'}
-                </div>
-                <h3 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>
+              <div className="text-center">
+                <h3 className="m-0 mb-2 text-[22px] font-bold text-text">
                   {quizScore}/{activeModule.quiz.length} correct
                 </h3>
                 {quizScore >= Math.ceil(activeModule.quiz.length * 0.7) ? (
                   <div>
-                    <p style={{ color: '#27ae60', fontSize: '15px', fontWeight: '700', margin: '0 0 24px' }}>You passed! Module {activeModule.id} is complete.</p>
+                    <p className="m-0 mb-6 text-[15px] font-bold text-oasis">You passed! Module {activeModule.id} is complete.</p>
                     {allCompleted
-                      ? <div style={{ background: '#e8f8f0', border: '1.5px solid #2ecc71', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-                          <p style={{ color: '#27ae60', fontWeight: '800', fontSize: '16px', margin: '0 0 4px' }}>🏆 Congratulations!</p>
-                          <p style={{ color: '#27ae60', fontSize: '14px', margin: 0 }}>You have completed all modules and earned the EnGedi Certified Professional badge. It will appear on your profile.</p>
+                      ? <div className="mb-6 border border-oasis bg-oasis-soft p-5">
+                          <p className="m-0 mb-1 text-[16px] font-bold text-oasis">Congratulations!</p>
+                          <p className="m-0 text-[14px] text-oasis">You have completed all modules and earned the EnGedi Certified Professional badge. It will appear on your profile.</p>
                         </div>
-                      : <p style={{ color: '#666666', fontSize: '14px', margin: '0 0 24px' }}>Continue to the next module to progress toward your certificate.</p>
+                      : <p className="m-0 mb-6 text-[14px] text-text-muted">Continue to the next module to progress toward your certificate.</p>
                     }
                   </div>
                 ) : (
                   <div>
-                    <p style={{ color: '#c0392b', fontSize: '15px', fontWeight: '700', margin: '0 0 8px' }}>Not quite — you need 70% to pass.</p>
-                    <p style={{ color: '#666666', fontSize: '14px', margin: '0 0 24px' }}>Go back and read the module again, then try the quiz once more.</p>
+                    <p className="m-0 mb-2 text-[15px] font-bold text-danger">Not quite — you need 70% to pass.</p>
+                    <p className="m-0 mb-6 text-[14px] text-text-muted">Go back and read the module again, then try the quiz once more.</p>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <button onClick={() => setTab('content')} style={{ background: '#F5EFE6', color: '#8B5E3C', border: '1.5px solid #8B5E3C', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Re-read Module</button>
+                <div className="flex flex-wrap justify-center gap-3">
+                  <Button variant="outline" onClick={() => setTab('content')}>Re-read Module</Button>
                   {quizScore >= Math.ceil(activeModule.quiz.length * 0.7)
-                    ? <button onClick={() => { setActiveModule(null); setTab('modules') }} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Back to Modules</button>
-                    : <button onClick={() => { setQuizAnswers({}); setQuizSubmitted(false) }} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Try Again</button>
+                    ? <Button onClick={() => { setActiveModule(null); setTab('modules') }}>Back to Modules</Button>
+                    : <Button onClick={() => { setQuizAnswers({}); setQuizSubmitted(false) }}>Try Again</Button>
                   }
                 </div>
               </div>

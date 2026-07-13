@@ -3,6 +3,9 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
 
 const roleMenus = {
   project_owner: [
@@ -123,8 +126,8 @@ export default function DashboardPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ color: '#666666' }}>Loading...</p>
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
     </div>
   )
 
@@ -136,79 +139,85 @@ export default function DashboardPage() {
   const needsBankDetails = ['artisan', 'supplier', 'professional', 'service_provider', 'equipment_provider'].includes(profile?.role) && !profile?.bank_account_name
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
+    <div className="min-h-screen bg-surface">
 
-      {/* Topbar */}
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {notifications.length > 0 && (
-            <div style={{ position: 'relative' }}>
-              <Link href="/messages" style={{ color: '#FFFFFF', textDecoration: 'none', fontSize: '20px' }}>🔔</Link>
-              <div style={{ position: 'absolute', top: '-6px', right: '-6px', background: '#c0392b', color: '#FFFFFF', borderRadius: '50%', width: '18px', height: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: '800' }}>
-                {notifications.length}
+      <AppNav
+        right={
+          <div className="flex items-center gap-4">
+            {notifications.length > 0 && (
+              <div className="relative">
+                <Link href="/messages" className="text-ink-text no-underline" aria-label="Notifications">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                    <path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z" />
+                    <path d="M10 19a2 2 0 0 0 4 0" />
+                  </svg>
+                </Link>
+                <div className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center bg-danger px-[3px] font-mono text-[10px] font-bold text-clay-contrast">
+                  {notifications.length}
+                </div>
               </div>
-            </div>
-          )}
-          <button onClick={handleLogout} style={{ background: 'transparent', color: '#999999', border: '1px solid #333', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px' }}>Log out</button>
-        </div>
-      </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="cursor-pointer border border-line-strong bg-transparent px-4 py-2 font-mono text-[13px] text-ink-muted transition-colors hover:text-ink-text"
+            >
+              Log out
+            </button>
+          </div>
+        }
+      />
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
+      <div className="mx-auto max-w-[900px] px-6 py-10">
 
         {/* Welcome card */}
-        <div style={{ background: '#FFFFFF', border: `1.5px solid ${isVerified ? '#2ecc71' : '#EEE6DA'}`, borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: '68px', height: '68px', borderRadius: '50%', background: '#F5EFE6', border: `2px solid ${isVerified ? '#2ecc71' : '#8B5E3C'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '26px', fontWeight: '800', color: '#8B5E3C', overflow: 'hidden' }}>
+        <div className={`ticks mb-6 border ${isVerified ? 'border-oasis' : 'border-line'} bg-surface-raised p-8`}>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative shrink-0">
+              <div className={`flex h-[68px] w-[68px] items-center justify-center overflow-hidden border-2 ${isVerified ? 'border-oasis' : 'border-clay'} bg-surface-sunk font-display text-[26px] font-bold text-clay`}>
                 {profile?.avatar_url
-                  ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
                   : profile?.full_name?.charAt(0)?.toUpperCase() || '?'
                 }
               </div>
               {isVerified && (
-                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '22px', height: '22px', borderRadius: '50%', background: '#2ecc71', border: '2px solid #FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ color: '#FFFFFF', fontSize: '11px', fontWeight: '800' }}>✓</span>
+                <div className="absolute -bottom-1 -right-1 flex h-[22px] w-[22px] items-center justify-center border-2 border-surface-raised bg-oasis">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--oasis-soft)" strokeWidth="3">
+                    <path d="M4 12l6 6L20 6" />
+                  </svg>
                 </div>
               )}
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                <h1 style={{ fontSize: '22px', fontWeight: '800', color: '#1A1A1A', margin: 0 }}>
-                  Welcome, {profile?.full_name?.split(' ')[0] || 'there'} 👋
+            <div className="flex-1">
+              <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                <h1 className="m-0 font-display text-[22px] font-bold text-text">
+                  Welcome, {profile?.full_name?.split(' ')[0] || 'there'}
                 </h1>
-                {isVerified && (
-                  <span style={{ background: '#e8f8f0', border: '1.5px solid #2ecc71', color: '#27ae60', fontSize: '12px', fontWeight: '700', padding: '3px 12px', borderRadius: '20px' }}>
-                    ✓ EnGedi Verified
-                  </span>
-                )}
+                {isVerified && <Badge tone="success">EnGedi Verified</Badge>}
               </div>
-              <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '12px', fontWeight: '600', padding: '3px 12px', borderRadius: '20px' }}>
-                {roleInfo.title}
-              </span>
-              <p style={{ color: '#666666', fontSize: '13px', margin: '10px 0 0', lineHeight: '1.6' }}>{roleInfo.tip}</p>
+              <Badge tone="pending">{roleInfo.title}</Badge>
+              <p className="mb-0 mt-2.5 text-[13px] leading-relaxed text-text-muted">{roleInfo.tip}</p>
             </div>
           </div>
         </div>
 
         {/* Notifications */}
         {notifications.length > 0 && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: 0, fontSize: '15px' }}>🔔 Notifications</p>
-              <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: '#8B5E3C', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Mark all read</button>
+          <div className="ticks mb-4 border border-line bg-surface-raised p-5">
+            <div className="mb-3 flex items-center justify-between">
+              <p className="m-0 font-display text-[15px] font-bold text-text">Notifications</p>
+              <button onClick={markAllRead} className="cursor-pointer border-none bg-transparent p-0 font-mono text-[13px] font-semibold text-clay">Mark all read</button>
             </div>
             {notifications.map(n => (
-              <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderTop: '1px solid #EEE6DA', gap: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '600', color: '#1A1A1A' }}>{n.title}</p>
-                  {n.body && <p style={{ margin: 0, fontSize: '12px', color: '#666666' }}>{n.body}</p>}
+              <div key={n.id} className="flex items-center justify-between gap-3 border-t border-line py-2.5">
+                <div className="flex-1">
+                  <p className="m-0 mb-0.5 text-[14px] font-semibold text-text">{n.title}</p>
+                  {n.body && <p className="m-0 text-[12px] text-text-muted">{n.body}</p>}
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                <div className="flex shrink-0 gap-2">
                   {n.link && (
-                    <Link href={n.link} onClick={() => markRead(n.id)} style={{ background: '#1A1A1A', color: '#FFFFFF', textDecoration: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>View</Link>
+                    <Link href={n.link} onClick={() => markRead(n.id)} className="bg-text px-3 py-1.5 font-mono text-[12px] font-semibold text-surface no-underline">View</Link>
                   )}
-                  <button onClick={() => markRead(n.id)} style={{ background: 'none', border: '1px solid #EEE6DA', color: '#999999', padding: '6px 10px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✕</button>
+                  <button onClick={() => markRead(n.id)} className="cursor-pointer border border-line bg-transparent px-2.5 py-1.5 text-[12px] text-text-muted">✕</button>
                 </div>
               </div>
             ))}
@@ -217,80 +226,78 @@ export default function DashboardPage() {
 
         {/* Profile completion */}
         {!isProfileComplete && (
-          <div style={{ background: '#FFF8F0', border: '1.5px solid #8B5E3C', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-clay bg-surface-raised p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px', fontSize: '15px' }}>Complete your profile</p>
-              <p style={{ color: '#666666', fontSize: '13px', margin: 0 }}>Add your details so customers can find and trust you</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-text">Complete your profile</p>
+              <p className="m-0 text-[13px] text-text-muted">Add your details so customers can find and trust you</p>
             </div>
-            <Link href="/dashboard/profile" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Complete Now</Link>
+            <Button href="/dashboard/profile" variant="solid">Complete Now</Button>
           </div>
         )}
 
         {/* Verification prompt */}
         {isProfileComplete && !profile?.documents_submitted && (
-          <div style={{ background: '#FFF8F0', border: '1.5px solid #EEE6DA', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line bg-surface-raised p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px', fontSize: '15px' }}>Get verified</p>
-              <p style={{ color: '#666666', fontSize: '13px', margin: 0 }}>Upload your documents to earn the EnGedi Verified badge</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-text">Get verified</p>
+              <p className="m-0 text-[13px] text-text-muted">Upload your documents to earn the EnGedi Verified badge</p>
             </div>
-            <Link href="/dashboard/verification" style={{ background: '#1A1A1A', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Upload Docs</Link>
+            <Button href="/dashboard/verification" variant="solid">Upload Docs</Button>
           </div>
         )}
 
         {profile?.documents_submitted && !isVerified && profile?.verification_status !== 'rejected' && (
-          <div style={{ background: '#FFF8F0', border: '1.5px solid #8B5E3C', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
-            <p style={{ margin: 0, fontWeight: '700', color: '#8B5E3C', fontSize: '14px' }}>⏳ Documents submitted — Your verification is under review</p>
+          <div className="mb-4 border border-clay bg-surface-raised px-5 py-4">
+            <p className="m-0 font-mono text-[13px] font-bold text-clay">Documents submitted — Your verification is under review</p>
           </div>
         )}
 
         {profile?.verification_status === 'rejected' && (
-          <div style={{ background: '#fde8e8', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '16px 20px', marginBottom: '16px' }}>
-            <p style={{ margin: '0 0 4px', fontWeight: '700', color: '#c0392b', fontSize: '14px' }}>❌ Verification rejected</p>
-            {profile?.admin_notes && <p style={{ margin: 0, fontSize: '13px', color: '#666666' }}>{profile.admin_notes}</p>}
+          <div className="mb-4 border border-danger bg-danger-soft px-5 py-4">
+            <p className="m-0 mb-1 font-mono text-[13px] font-bold text-danger">Verification rejected</p>
+            {profile?.admin_notes && <p className="m-0 text-[13px] text-text-muted">{profile.admin_notes}</p>}
           </div>
         )}
 
         {/* Bank details prompt for providers */}
         {needsBankDetails && isProfileComplete && (
-          <div style={{ background: '#FFF8F0', border: '1.5px solid #8B5E3C', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-clay bg-surface-raised p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px', fontSize: '15px' }}>Add your bank details</p>
-              <p style={{ color: '#666666', fontSize: '13px', margin: 0 }}>Required to receive payments when clients confirm orders</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-text">Add your bank details</p>
+              <p className="m-0 text-[13px] text-text-muted">Required to receive payments when clients confirm orders</p>
             </div>
-            <Link href="/dashboard/bank-details" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Add Now</Link>
+            <Button href="/dashboard/bank-details" variant="solid">Add Now</Button>
           </div>
         )}
 
         {/* Artisan training prompt */}
         {profile?.role === 'artisan' && (
-          <div style={{ background: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-ink p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#FFFFFF', margin: '0 0 4px', fontSize: '15px' }}>🏆 Complete your training</p>
-              <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>Finish all 5 modules to earn your EnGedi Certified Professional badge</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-ink-text">Complete your training</p>
+              <p className="m-0 text-[13px] text-ink-muted">Finish all 5 modules to earn your EnGedi Certified Professional badge</p>
             </div>
-            <Link href="/training" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Start Training</Link>
+            <Button href="/training" variant="solid">Start Training</Button>
           </div>
         )}
 
         {/* Supplier listings prompt */}
         {profile?.role === 'supplier' && (
-          <div style={{ background: '#1A1A1A', borderRadius: '12px', padding: '20px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-ink p-5">
             <div>
-              <p style={{ fontWeight: '700', color: '#FFFFFF', margin: '0 0 4px', fontSize: '15px' }}>📦 List your products</p>
-              <p style={{ color: '#999999', fontSize: '13px', margin: 0 }}>Add your materials so buyers across Nigeria can find and order from you</p>
+              <p className="m-0 mb-1 text-[15px] font-bold text-ink-text">List your products</p>
+              <p className="m-0 text-[13px] text-ink-muted">Add your materials so buyers across Nigeria can find and order from you</p>
             </div>
-            <Link href="/marketplace" style={{ background: '#8B5E3C', color: '#FFFFFF', textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>Manage Listings</Link>
+            <Button href="/marketplace" variant="solid">Manage Listings</Button>
           </div>
         )}
 
         {/* Menu */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="ticks grid grid-cols-1 border-l border-t border-line sm:grid-cols-2">
           {menuItems.map(item => (
-            <Link key={item.title} href={item.href} style={{ textDecoration: 'none' }}>
-              <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '12px', padding: '24px', cursor: 'pointer', height: '100%', boxSizing: 'border-box' }}>
-                <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 6px' }}>{item.title}</h3>
-                <p style={{ fontSize: '13px', color: '#666666', margin: 0, lineHeight: '1.5' }}>{item.desc}</p>
-              </div>
+            <Link key={item.title} href={item.href} className="border-b border-r border-line p-6 no-underline transition-colors hover:bg-surface-raised">
+              <h3 className="m-0 mb-1.5 font-display text-[15px] font-bold text-text">{item.title}</h3>
+              <p className="m-0 text-[13px] leading-relaxed text-text-muted">{item.desc}</p>
             </Link>
           ))}
         </div>

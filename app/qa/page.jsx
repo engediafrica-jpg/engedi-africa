@@ -3,6 +3,10 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import AppNav from '@/components/AppNav'
+import Button from '@/components/Button'
+import Badge from '@/components/Badge'
+import Input from '@/components/Input'
 
 export default function QAPage() {
   const supabase = createClient()
@@ -64,101 +68,89 @@ export default function QAPage() {
     setPosting(false)
   }
 
-  if (loading) return <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: '#666666' }}>Loading...</p></div>
+  if (loading) return <div className="flex min-h-screen items-center justify-center bg-surface"><p className="text-text-muted">Loading...</p></div>
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
-      <div style={{ background: '#1A1A1A', borderBottom: '3px solid #8B5E3C', padding: '0 24px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <Link href="/" style={{ color: '#FFFFFF', textDecoration: 'none', fontWeight: '800', fontSize: '20px' }}>EnGedi Africa</Link>
-        <Link href="/dashboard" style={{ color: '#999999', textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
-      </div>
+    <div className="min-h-screen bg-surface">
+      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
 
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '40px 24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px', flexWrap: 'wrap', gap: '12px' }}>
+      <div className="mx-auto max-w-[800px] px-6 py-10">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 4px' }}>Construction Q&A</h1>
-            <p style={{ color: '#666666', fontSize: '14px', margin: 0 }}>Ask questions, get answers from verified professionals and artisans</p>
+            <h1 className="m-0 mb-1 text-[24px] font-bold text-text">Construction Q&amp;A</h1>
+            <p className="m-0 text-[14px] text-text-muted">Ask questions, get answers from verified professionals and artisans</p>
           </div>
-          <button onClick={() => setShowForm(!showForm)} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px 24px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
-            + Ask a Question
-          </button>
+          <Button onClick={() => setShowForm(!showForm)}>+ Ask a Question</Button>
         </div>
 
         {/* Ask form */}
         {showForm && (
-          <div style={{ background: '#FFFFFF', border: '1.5px solid #8B5E3C', borderRadius: '16px', padding: '32px', marginBottom: '24px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 20px' }}>Ask your question</h3>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Question Title</label>
-              <input
-                type="text"
-                placeholder="e.g. What is the best cement mix ratio for columns?"
-                value={newQuestion.title}
-                onChange={e => setNewQuestion({ ...newQuestion, title: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}
-              />
+          <div className="ticks mb-6 border border-clay bg-surface-raised p-8">
+            <h3 className="m-0 mb-5 text-[16px] font-bold text-text">Ask your question</h3>
+            <div className="mb-4">
+              <Input label="Question Title" type="text" placeholder="e.g. What is the best cement mix ratio for columns?" value={newQuestion.title} onChange={e => setNewQuestion({ ...newQuestion, title: e.target.value })} />
             </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Details</label>
+            <div className="mb-4">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Details</label>
               <textarea
                 placeholder="Describe your question in detail..."
                 value={newQuestion.body}
                 onChange={e => setNewQuestion({ ...newQuestion, body: e.target.value })}
                 rows={4}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }}
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
               />
             </div>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Category</label>
+            <div className="mb-6">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Category</label>
               <select
                 value={newQuestion.category}
                 onChange={e => setNewQuestion({ ...newQuestion, category: e.target.value })}
-                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', background: '#FFFFFF' }}
+                className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
               >
                 <option value="">Select a category</option>
                 {categories.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
             </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setShowForm(false)} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleSubmitQuestion} disabled={submitting} style={{ flex: 2, background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={() => setShowForm(false)}>Cancel</Button>
+              <Button className="flex-[2] justify-center" disabled={submitting} onClick={handleSubmitQuestion}>
                 {submitting ? 'Posting...' : 'Post Question'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
 
         {/* Questions list */}
         {questions.length === 0
-          ? <div style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: '#999999', fontSize: '15px', margin: 0 }}>No questions yet. Be the first to ask!</p>
+          ? <div className="border border-line bg-surface-raised p-10 text-center">
+              <p className="m-0 text-[15px] text-text-muted">No questions yet. Be the first to ask!</p>
             </div>
           : questions.map(q => (
-            <div key={q.id} style={{ background: '#FFFFFF', border: '1.5px solid #EEE6DA', borderRadius: '16px', padding: '24px', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                <div style={{ flex: 1 }}>
-                  {q.category && <span style={{ background: '#F5EFE6', border: '1px solid #8B5E3C', color: '#8B5E3C', fontSize: '11px', fontWeight: '600', padding: '3px 10px', borderRadius: '20px', marginBottom: '8px', display: 'inline-block' }}>{q.category}</span>}
-                  <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '8px 0 6px' }}>{q.title}</h3>
-                  <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 12px', lineHeight: '1.5' }}>{q.body}</p>
-                  <p style={{ fontSize: '12px', color: '#999999', margin: 0 }}>Asked by {q.profiles?.full_name || 'Anonymous'} · {new Date(q.created_at).toLocaleDateString()}</p>
+            <div key={q.id} className="mb-4 border border-line bg-surface-raised p-6">
+              <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+                <div className="flex-1">
+                  {q.category && <span className="mb-2 inline-block"><Badge tone="pending">{q.category}</Badge></span>}
+                  <h3 className="m-0 mb-1.5 text-[16px] font-bold text-text">{q.title}</h3>
+                  <p className="m-0 mb-3 text-[14px] leading-relaxed text-text-muted">{q.body}</p>
+                  <p className="m-0 text-[12px] text-text-muted">Asked by {q.profiles?.full_name || 'Anonymous'} · {new Date(q.created_at).toLocaleDateString()}</p>
                 </div>
               </div>
 
               {/* Answers */}
               {q.answers && q.answers.length > 0 && (
-                <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #EEE6DA' }}>
-                  <p style={{ fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '12px' }}>{q.answers.length} {q.answers.length === 1 ? 'Answer' : 'Answers'}</p>
+                <div className="mt-4 border-t border-line pt-4">
+                  <p className="mb-3 text-[13px] font-semibold text-text">{q.answers.length} {q.answers.length === 1 ? 'Answer' : 'Answers'}</p>
                   {q.answers.map(a => (
-                    <div key={a.id} style={{ background: '#F9F6F1', borderRadius: '10px', padding: '16px', marginBottom: '10px' }}>
-                      <p style={{ fontSize: '14px', color: '#1A1A1A', margin: '0 0 8px', lineHeight: '1.5' }}>{a.body}</p>
-                      <p style={{ fontSize: '12px', color: '#999999', margin: 0 }}>{a.profiles?.full_name || 'Anonymous'} · {a.profiles?.role?.replace('_', ' ')} · {new Date(a.created_at).toLocaleDateString()}</p>
+                    <div key={a.id} className="mb-2.5 border border-line bg-surface-sunk p-4">
+                      <p className="m-0 mb-2 text-[14px] leading-relaxed text-text">{a.body}</p>
+                      <p className="m-0 text-[12px] text-text-muted">{a.profiles?.full_name || 'Anonymous'} · {a.profiles?.role?.replace('_', ' ')} · {new Date(a.created_at).toLocaleDateString()}</p>
                     </div>
                   ))}
                 </div>
               )}
 
               {/* Answer input */}
-              <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #EEE6DA' }}>
+              <div className="mt-4 border-t border-line pt-4">
                 {selected === q.id
                   ? <div>
                       <textarea
@@ -166,18 +158,18 @@ export default function QAPage() {
                         value={answer}
                         onChange={e => setAnswer(e.target.value)}
                         rows={3}
-                        style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical', marginBottom: '10px' }}
+                        className="mb-2.5 w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
                       />
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button onClick={() => setSelected(null)} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '10px', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Cancel</button>
-                        <button onClick={() => handleSubmitAnswer(q.id)} disabled={posting} style={{ flex: 2, background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                      <div className="flex gap-2">
+                        <Button variant="outline" className="flex-1 justify-center text-[13px]" onClick={() => setSelected(null)}>Cancel</Button>
+                        <Button className="flex-[2] justify-center text-[13px]" disabled={posting} onClick={() => handleSubmitAnswer(q.id)}>
                           {posting ? 'Posting...' : 'Post Answer'}
-                        </button>
+                        </Button>
                       </div>
                     </div>
-                  : <button onClick={() => setSelected(q.id)} style={{ background: 'transparent', border: '1px solid #EEE6DA', color: '#666666', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+                  : <Button variant="outline" className="text-[13px]" onClick={() => setSelected(q.id)}>
                       Answer this question
-                    </button>
+                    </Button>
                 }
               </div>
             </div>
