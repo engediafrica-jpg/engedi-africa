@@ -19,6 +19,17 @@ export default function ServiceProviderProfilePage({ params }) {
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
   const [hoveredStar, setHoveredStar] = useState(0)
+  const [completedBookings, setCompletedBookings] = useState([])
+  const [selectedBookingId, setSelectedBookingId] = useState('')
+
+  const [showBookingForm, setShowBookingForm] = useState(false)
+  const [jobTitle, setJobTitle] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
+  const [jobLocation, setJobLocation] = useState('')
+  const [preferredDate, setPreferredDate] = useState('')
+  const [budget, setBudget] = useState('')
+  const [submittingBooking, setSubmittingBooking] = useState(false)
+  const [bookingMessage, setBookingMessage] = useState('')
 
   useEffect(() => {
     const getData = async () => {
@@ -35,6 +46,16 @@ export default function ServiceProviderProfilePage({ params }) {
         .eq('reviewed_id', params.id)
         .order('created_at', { ascending: false })
       setReviews(reviewData || [])
+      const { data: bookingData } = await supabase
+        .from('bookings')
+        .select('id, job_title, created_at')
+        .eq('project_owner_id', me.id)
+        .eq('provider_id', params.id)
+        .eq('status', 'completed')
+        .order('created_at', { ascending: false })
+      const unreviewed = (bookingData || []).filter(b => !(reviewData || []).some(r => r.booking_id === b.id))
+      setCompletedBookings(unreviewed)
+      if (unreviewed.length > 0) setSelectedBookingId(unreviewed[0].id)
       setLoading(false)
     }
     getData()
@@ -59,23 +80,60 @@ export default function ServiceProviderProfilePage({ params }) {
 
   const handleSubmitReview = async () => {
     if (rating === 0) { setReviewMessage('Please select a star rating'); return }
+    if (!selectedBookingId) { setReviewMessage('Select which job this review is for'); return }
     setSubmittingReview(true)
     const { data: existing } = await supabase.from('reviews')
-      .select('id').eq('reviewer_id', currentUser.id).eq('reviewed_id', profile.id).single()
-    if (existing) { setReviewMessage('You have already reviewed this provider'); setSubmittingReview(false); return }
+      .select('id').eq('reviewer_id', currentUser.id).eq('booking_id', selectedBookingId).single()
+    if (existing) { setReviewMessage('You have already reviewed this job'); setSubmittingReview(false); return }
     const { data, error } = await supabase.from('reviews').insert({
       reviewer_id: currentUser.id,
       reviewed_id: profile.id,
+      booking_id: selectedBookingId,
       rating,
       body: reviewBody,
     }).select('*, reviewer:profiles!reviews_reviewer_id_fkey(full_name, avatar_url, role)').single()
     if (error) { setReviewMessage('Error submitting review'); setSubmittingReview(false); return }
     setReviews([data, ...reviews])
+    const remaining = completedBookings.filter(b => b.id !== selectedBookingId)
+    setCompletedBookings(remaining)
+    setSelectedBookingId(remaining[0]?.id || '')
     setRating(0)
     setReviewBody('')
     setShowReviewForm(false)
     setReviewMessage('Review submitted!')
     setSubmittingReview(false)
+  }
+
+  const handleSubmitBooking = async () => {
+    if (!jobTitle.trim()) { setBookingMessage('Enter a job title'); return }
+    setSubmittingBooking(true)
+    const { error } = await supabase.from('bookings').insert({
+      project_owner_id: currentUser.id,
+      provider_id: profile.id,
+      job_title: jobTitle,
+      job_description: jobDescription,
+      location: jobLocation,
+      preferred_date: preferredDate || null,
+      budget: budget ? Number(budget) : null,
+      status: 'requested',
+    })
+    if (error) { setBookingMessage('Error: ' + error.message); setSubmittingBooking(false); return }
+    await supabase.from('notifications').insert({
+      user_id: profile.id,
+      type: 'booking',
+      title: 'New booking request',
+      body: `${currentUser.full_name} wants a quote for "${jobTitle}"`,
+      link: '/bookings',
+      is_read: false,
+    })
+    setSubmittingBooking(false)
+    setShowBookingForm(false)
+    setJobTitle('')
+    setJobDescription('')
+    setJobLocation('')
+    setPreferredDate('')
+    setBudget('')
+    setBookingMessage('Quote requested! Track its status in your Bookings tab.')
   }
 
   const StarDisplay = ({ value, size = 20 }) => (
@@ -97,7 +155,7 @@ export default function ServiceProviderProfilePage({ params }) {
 
   if (loading) return <div style={{ minHeight: '100vh', background: '#F9F6F1', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: '#666666' }}>Loading...</p></div>
 
-  const alreadyReviewed = reviews.some(r => r.reviewer_id === currentUser?.id)
+  const canReview = completedBookings.length > 0
 
   return (
     <div style={{ minHeight: '100vh', background: '#F9F6F1' }}>
@@ -160,15 +218,30 @@ export default function ServiceProviderProfilePage({ params }) {
               <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#1A1A1A', margin: '0 0 4px' }}>Reviews {reviews.length > 0 && `(${reviews.length})`}</h3>
               {avgRating && <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><StarDisplay value={Math.round(avgRating)} size={16} /><span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1A1A' }}>{avgRating} out of 5</span></div>}
             </div>
-            {currentUser?.id !== profile.id && !alreadyReviewed && (
+            {currentUser?.id !== profile.id && canReview && (
               <button onClick={() => setShowReviewForm(!showReviewForm)} style={{ background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
                 + Write a Review
               </button>
             )}
           </div>
 
+          {currentUser?.id !== profile.id && !canReview && (
+            <p style={{ color: '#999999', fontSize: '12px', margin: '0 0 16px' }}>You can leave a review once you&apos;ve completed a booking with this provider.</p>
+          )}
+
           {showReviewForm && (
             <div style={{ background: '#F9F6F1', borderRadius: '12px', padding: '20px', marginBottom: '20px' }}>
+              {completedBookings.length > 1 && (
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Which job is this review for?</label>
+                  <select value={selectedBookingId} onChange={e => setSelectedBookingId(e.target.value)}
+                    style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }}>
+                    {completedBookings.map(b => (
+                      <option key={b.id} value={b.id}>{b.job_title} — {new Date(b.created_at).toLocaleDateString()}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <p style={{ fontSize: '14px', fontWeight: '600', color: '#1A1A1A', margin: '0 0 12px' }}>Your rating</p>
               <StarInput />
               <div style={{ marginBottom: '16px' }}>
@@ -206,11 +279,64 @@ export default function ServiceProviderProfilePage({ params }) {
         </div>
 
         {currentUser?.id !== profile.id && (
-          <button onClick={handleStartConversation} disabled={messaging || messageSent} style={{ width: '100%', background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
-            {messageSent ? '✓ Conversation started — redirecting...' : messaging ? 'Opening chat...' : `Contact ${profile.company_name || profile.full_name?.split(' ')[0]}`}
-          </button>
+          <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+            <button onClick={() => setShowBookingForm(true)} style={{ flex: 2, minWidth: '200px', background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
+              Request a Quote
+            </button>
+            <button onClick={handleStartConversation} disabled={messaging || messageSent} style={{ flex: 1, minWidth: '160px', background: '#1A1A1A', color: '#FFFFFF', border: 'none', padding: '16px', borderRadius: '12px', fontSize: '16px', fontWeight: '700', cursor: 'pointer' }}>
+              {messageSent ? '✓ Redirecting...' : messaging ? 'Opening chat...' : `Contact`}
+            </button>
+          </div>
         )}
+        {bookingMessage && !showBookingForm && <p style={{ color: bookingMessage.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginTop: '12px', fontWeight: '600' }}>{bookingMessage}</p>}
       </div>
+
+      {/* Booking request modal */}
+      {showBookingForm && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#00000088', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '16px', padding: '32px', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#1A1A1A', margin: '0 0 8px' }}>Request a Quote</h3>
+            <p style={{ fontSize: '14px', color: '#666666', margin: '0 0 24px' }}>Tell {profile.company_name || profile.full_name?.split(' ')[0]} about the job. They&apos;ll respond with a price.</p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Job title</label>
+              <input value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Weekly office cleaning for construction site"
+                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Job description</label>
+              <textarea value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={3} placeholder="Describe the scope of work..."
+                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', resize: 'vertical' }} />
+            </div>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Location</label>
+              <input value={jobLocation} onChange={e => setJobLocation(e.target.value)} placeholder="e.g. Lekki, Lagos"
+                style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+            </div>
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '14px' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Preferred date</label>
+                <input type="date" value={preferredDate} onChange={e => setPreferredDate(e.target.value)}
+                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#1A1A1A', marginBottom: '6px' }}>Budget (₦)</label>
+                <input type="number" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Optional"
+                  style={{ width: '100%', padding: '12px', border: '1.5px solid #EEE6DA', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+
+            {bookingMessage && <p style={{ color: bookingMessage.includes('Error') ? '#c0392b' : '#2ecc71', fontSize: '13px', marginBottom: '12px' }}>{bookingMessage}</p>}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button onClick={() => { setShowBookingForm(false); setBookingMessage('') }} style={{ flex: 1, background: '#FFFFFF', color: '#1A1A1A', border: '1.5px solid #EEE6DA', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSubmitBooking} disabled={submittingBooking} style={{ flex: 2, background: '#8B5E3C', color: '#FFFFFF', border: 'none', padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
+                {submittingBooking ? 'Sending...' : 'Send Request'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
