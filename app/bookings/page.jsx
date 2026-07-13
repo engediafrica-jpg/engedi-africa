@@ -277,6 +277,17 @@ export default function BookingsPage() {
       await supabase.from('bookings').update({ dispute_raised: true, status: 'disputed' }).eq('id', disputeBooking.id)
       setBookings(bookings.map(b => b.id === disputeBooking.id ? { ...b, dispute_raised: true, status: 'disputed' } : b))
       await notify(disputeBooking.provider_id, 'dispute', 'A dispute has been raised', `${profile.full_name} raised a dispute on "${disputeBooking.job_title}"`)
+      const { data: admins } = await supabase.from('profiles').select('id').eq('is_admin', true)
+      for (const a of admins || []) {
+        await supabase.from('notifications').insert({
+          user_id: a.id,
+          type: 'dispute',
+          title: 'New dispute raised',
+          body: `${profile.full_name} raised a dispute on "${disputeBooking.job_title}"`,
+          link: '/admin',
+          is_read: false,
+        })
+      }
       setDisputeBooking(null)
       setDisputeReason('')
       setMessage('Dispute raised. Our team will review within 24 hours.')

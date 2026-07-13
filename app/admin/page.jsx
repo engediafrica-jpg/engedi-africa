@@ -25,6 +25,7 @@ export default function AdminPage() {
   const [resolvingId, setResolvingId] = useState(null)
   const [resolutionNotes, setResolutionNotes] = useState({})
   const [disputeMessage, setDisputeMessage] = useState('')
+  const [openDisputeCount, setOpenDisputeCount] = useState(0)
 
   useEffect(() => {
     const getData = async () => {
@@ -35,6 +36,8 @@ export default function AdminPage() {
       setAdmin(me)
       const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
       setUsers(data || [])
+      const { count } = await supabase.from('disputes').select('id', { count: 'exact', head: true }).eq('status', 'open')
+      setOpenDisputeCount(count || 0)
       setLoading(false)
     }
     getData()
@@ -66,7 +69,7 @@ export default function AdminPage() {
           provider:profiles!bookings_provider_id_fkey(full_name, paystack_recipient_code))`)
       .eq('status', 'open')
       .order('created_at', { ascending: false })
-    if (data) setDisputes(data)
+    if (data) { setDisputes(data); setOpenDisputeCount(data.length) }
     setDisputesLoading(false)
   }
 
@@ -131,7 +134,9 @@ export default function AdminPage() {
         resolved_at: new Date().toISOString(),
       }).eq('id', dispute.id)
 
-      setDisputes(disputes.filter(d => d.id !== dispute.id))
+      const remaining = disputes.filter(d => d.id !== dispute.id)
+      setDisputes(remaining)
+      setOpenDisputeCount(remaining.length)
       setDisputeMessage('Dispute resolved.')
     } catch (error) {
       setDisputeMessage('Error: ' + error.message)
@@ -217,12 +222,24 @@ export default function AdminPage() {
         <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#1A1A1A', marginBottom: '4px' }}>Admin Panel</h1>
         <p style={{ color: '#666666', fontSize: '14px', marginBottom: '32px' }}>{users.length} total users · {pendingVerification.length} pending verification</p>
 
+        {openDisputeCount > 0 && (
+          <button
+            onClick={() => { setActiveTab('disputes'); if (disputes.length === 0) loadDisputes() }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', textAlign: 'left', background: '#fde8e8', border: '1.5px solid #c0392b', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', cursor: 'pointer' }}
+          >
+            <p style={{ margin: 0, fontWeight: '700', color: '#c0392b', fontSize: '14px' }}>
+              ⚠️ {openDisputeCount} open {openDisputeCount === 1 ? 'dispute needs' : 'disputes need'} review
+            </p>
+            <span style={{ color: '#c0392b', fontSize: '13px', fontWeight: '700' }}>Review →</span>
+          </button>
+        )}
+
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', flexWrap: 'wrap' }}>
           {[
             { key: 'users', label: `All Users (${users.length})` },
             { key: 'pending', label: `Pending Review (${pendingVerification.length})` },
-            { key: 'disputes', label: `Disputes${disputes.length ? ` (${disputes.length})` : ''}` },
+            { key: 'disputes', label: `Disputes${openDisputeCount ? ` (${openDisputeCount})` : ''}` },
             { key: 'training', label: 'Training Progress' },
           ].map(tab => (
             <button

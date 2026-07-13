@@ -208,6 +208,17 @@ export default function OrdersPage() {
         link: '/orders',
         is_read: false,
       })
+      const { data: admins } = await supabase.from('profiles').select('id').eq('is_admin', true)
+      for (const a of admins || []) {
+        await supabase.from('notifications').insert({
+          user_id: a.id,
+          type: 'dispute',
+          title: 'New dispute raised',
+          body: `${profile.full_name} raised a dispute on order #${disputeOrder.id.substring(0, 8)}`,
+          link: '/admin',
+          is_read: false,
+        })
+      }
       setDisputeOrder(null)
       setDisputeReason('')
       setMessage('Dispute raised. Our team will review within 24 hours.')
