@@ -203,6 +203,7 @@ export default function BookingsPage() {
             commission_amount: commission,
             payout_amount: payout,
             auto_confirm_at: autoConfirmAt,
+            paid_at: new Date().toISOString(),
           }).eq('id', booking.id)
           if (!error) {
             setBookings(bookings.map(b => b.id === booking.id ? { ...b, payment_status: 'paid', status: 'paid', payment_reference: response.reference, commission_amount: commission, payout_amount: payout, auto_confirm_at: autoConfirmAt } : b))
@@ -453,7 +454,7 @@ export default function BookingsPage() {
           <div className="border border-line bg-surface-raised p-16 text-center">
             <p className="m-0 mb-2 text-[15px] font-bold text-text-muted">No bookings yet</p>
             <p className="m-0 mb-5 text-[13px] text-text-muted">
-              {activeTab === 'requesting' ? 'Visit an artisan, professional, or service provider\'s profile to request a quote' : 'Requests from clients will appear here'}
+              {activeTab === 'requesting' ? 'Visit an artisan, professional, service provider, or equipment provider\'s profile to request a quote or book equipment' : 'Requests from clients will appear here'}
             </p>
             {activeTab === 'requesting' && (
               <Button href="/browse">Browse Providers</Button>

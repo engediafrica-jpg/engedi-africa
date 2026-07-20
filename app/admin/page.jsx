@@ -37,6 +37,9 @@ export default function AdminPage() {
   const [paymentsLoading, setPaymentsLoading] = useState(false)
   const [paymentForm, setPaymentForm] = useState({ marketer_id: '', month: '', amount: '', note: '' })
   const [loggingPayment, setLoggingPayment] = useState(false)
+  const [revenueBookings, setRevenueBookings] = useState([])
+  const [revenueOrders, setRevenueOrders] = useState([])
+  const [revenueLoading, setRevenueLoading] = useState(false)
 
   useEffect(() => {
     const getData = async () => {
@@ -73,6 +76,31 @@ export default function AdminPage() {
       .order('month', { ascending: false })
     setMarketerPayments(data || [])
     setPaymentsLoading(false)
+  }
+
+  const loadRevenue = async () => {
+    setRevenueLoading(true)
+    const since = new Date()
+    since.setMonth(since.getMonth() - 5)
+    since.setDate(1)
+    since.setHours(0, 0, 0, 0)
+    const sinceIso = since.toISOString()
+
+    // Filtering by created_at (not paid_at) means a transaction created 7+
+    // months ago but paid this month is missed from the trend window — an
+    // acceptable approximation at current data volume, matching how every
+    // other tab in this file aggregates client-side rather than via SQL.
+    const [{ data: bookingRows }, { data: orderRows }] = await Promise.all([
+      supabase.from('bookings')
+        .select('id, quoted_price, commission_amount, payment_status, dispute_raised, created_at, paid_at')
+        .gte('created_at', sinceIso),
+      supabase.from('orders')
+        .select('id, total_price, commission_amount, payment_status, dispute_raised, created_at, paid_at')
+        .gte('created_at', sinceIso),
+    ])
+    setRevenueBookings(bookingRows || [])
+    setRevenueOrders(orderRows || [])
+    setRevenueLoading(false)
   }
 
   const handleCreateMarketer = async () => {
@@ -281,6 +309,74 @@ export default function AdminPage() {
 
   const verificationTone = (status) => status === 'approved' ? 'success' : status === 'rejected' ? 'danger' : 'pending'
 
+  // --- Revenue tab aggregation ---
+  const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  const now = new Date()
+  const thisMonthKey = monthKey(now)
+  const paidStatuses = ['paid', 'released']
+
+  const revenueRows = [
+    ...revenueBookings.map(b => ({
+      amount: b.commission_amount, gmv: b.quoted_price,
+      payment_status: b.payment_status, disputed: b.dispute_raised,
+      date: b.paid_at || b.created_at,
+    })),
+    ...revenueOrders.map(o => ({
+      amount: o.commission_amount, gmv: o.total_price,
+      payment_status: o.payment_status, disputed: o.dispute_raised,
+      date: o.paid_at || o.created_at,
+    })),
+  ].filter(r => paidStatuses.includes(r.payment_status))
+
+  const thisMonthRows = revenueRows.filter(r => monthKey(new Date(r.date)) === thisMonthKey)
+
+  const monthlyRevenue = thisMonthRows.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+  const annualRunRate = monthlyRevenue * 12
+  const gmvThisMonth = thisMonthRows.reduce((sum, r) => sum + Number(r.gmv || 0), 0)
+  const takeRate = gmvThisMonth > 0 ? (monthlyRevenue / gmvThisMonth) * 100 : 0
+
+  // Trailing 6-month trend — explicit month keys so empty months render as 0, not gaps
+  const trendMap = revenueRows.reduce((acc, r) => {
+    const key = monthKey(new Date(r.date))
+    if (!acc[key]) acc[key] = { month: key, revenue: 0, gmv: 0 }
+    acc[key].revenue += Number(r.amount || 0)
+    acc[key].gmv += Number(r.gmv || 0)
+    return acc
+  }, {})
+  const revenueTrend = Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1)
+    const key = monthKey(d)
+    return trendMap[key] || { month: key, revenue: 0, gmv: 0 }
+  })
+  const trendMaxGmv = Math.max(1, ...revenueTrend.map(t => t.gmv))
+
+  // New signups this month, by role
+  const newSignupsThisMonth = users.filter(u => monthKey(new Date(u.created_at)) === thisMonthKey)
+  const signupsByRole = newSignupsThisMonth.reduce((acc, u) => {
+    const r = u.role || 'unknown'
+    acc[r] = (acc[r] || 0) + 1
+    return acc
+  }, {})
+
+  // Artisan certification rate — reuses trainingByUser above
+  const artisanProfiles = users.filter(u => u.role === 'artisan')
+  const certifiedArtisanIds = new Set(
+    Object.entries(trainingByUser).filter(([, t]) => t.modules.length >= TOTAL_MODULES).map(([uid]) => uid)
+  )
+  const certificationRate = artisanProfiles.length > 0
+    ? (artisanProfiles.filter(a => certifiedArtisanIds.has(a.id)).length / artisanProfiles.length) * 100
+    : 0
+
+  // Dispute rate — same this-month cohort as Monthly Revenue for apples-to-apples comparison
+  const disputeRate = thisMonthRows.length > 0
+    ? (thisMonthRows.filter(r => r.disputed).length / thisMonthRows.length) * 100
+    : 0
+
+  // Field marketer cost-per-signup
+  const totalMarketerSpend = marketerPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const totalReferredSignups = users.filter(u => u.referred_by_marketer_id).length
+  const costPerSignup = totalReferredSignups > 0 ? totalMarketerSpend / totalReferredSignups : 0
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading admin panel...</p>
@@ -315,6 +411,7 @@ export default function AdminPage() {
             { key: 'disputes', label: `Disputes${openDisputeCount ? ` (${openDisputeCount})` : ''}` },
             { key: 'training', label: 'Training Progress' },
             { key: 'marketers', label: `Field Marketers (${marketers.length})` },
+            { key: 'revenue', label: 'Revenue' },
           ].map(tab => (
             <button
               key={tab.key}
@@ -323,6 +420,11 @@ export default function AdminPage() {
                 if (tab.key === 'training' && training.length === 0) loadTraining()
                 if (tab.key === 'disputes') loadDisputes()
                 if (tab.key === 'marketers' && marketerPayments.length === 0) loadMarketerPayments()
+                if (tab.key === 'revenue') {
+                  loadRevenue()
+                  if (training.length === 0) loadTraining()
+                  if (marketerPayments.length === 0) loadMarketerPayments()
+                }
               }}
               className={`border px-5 py-2.5 text-[13px] font-bold ${activeTab === tab.key ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}
             >
@@ -538,6 +640,83 @@ export default function AdminPage() {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Revenue tab */}
+        {activeTab === 'revenue' && (
+          <div>
+            {revenueLoading ? (
+              <p className="text-text-muted">Loading revenue data...</p>
+            ) : (
+              <>
+                <div className="mb-2 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5">
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Monthly Revenue (MRR)</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">₦{Number(monthlyRevenue).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Annual Run-Rate (ARR)</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">₦{Number(annualRunRate).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">GMV This Month</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">₦{Number(gmvThisMonth).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Take Rate</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">{takeRate.toFixed(1)}%</p>
+                  </div>
+                </div>
+                <p className="m-0 mb-5 text-[11.5px] text-text-muted">Monthly Revenue and Annual Run-Rate are derived from commission on bookings + orders, not subscription revenue — there are no subscriptions on this platform.</p>
+
+                <div className="mb-6 grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-2.5">
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">New Signups (This Month)</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">{newSignupsThisMonth.length}</p>
+                    {Object.keys(signupsByRole).length > 0 && (
+                      <p className="m-0 mt-1 text-[11px] text-text-muted">{Object.entries(signupsByRole).map(([r, c]) => `${roleLabel[r] || r}: ${c}`).join(' · ')}</p>
+                    )}
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Artisan Certification Rate</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">{certificationRate.toFixed(0)}%</p>
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Dispute Rate (This Month)</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">{disputeRate.toFixed(1)}%</p>
+                  </div>
+                  <div className="border border-line bg-surface-sunk px-3 py-2.5">
+                    <p className="m-0 mb-0.5 font-mono text-[11px] font-semibold uppercase tracking-wide text-text-muted">Cost per Marketer Signup</p>
+                    <p className="m-0 text-[15px] font-bold tabular-nums text-text">₦{Number(costPerSignup).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                  </div>
+                </div>
+
+                <p className="mb-3 text-[14px] font-bold text-text">Revenue &amp; GMV — Last 6 Months</p>
+                <div className="mb-2 flex items-center gap-4 text-[11.5px] text-text-muted">
+                  <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 bg-clay"></span>Revenue</span>
+                  <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 bg-line-strong"></span>GMV</span>
+                </div>
+                <div className="flex flex-col gap-2.5 border border-line bg-surface-raised p-4">
+                  {revenueTrend.map(t => (
+                    <div key={t.month} className="flex items-center gap-3">
+                      <p className="m-0 w-14 shrink-0 font-mono text-[11px] text-text-muted">
+                        {new Date(t.month + '-01').toLocaleDateString('en-NG', { month: 'short', year: '2-digit' })}
+                      </p>
+                      <div className="flex-1">
+                        <div className="mb-1 h-2 overflow-hidden bg-surface-sunk" title={`GMV ₦${Number(t.gmv).toLocaleString()}`}>
+                          <div className="h-full bg-line-strong" style={{ width: `${(t.gmv / trendMaxGmv) * 100}%` }}></div>
+                        </div>
+                        <div className="h-2 overflow-hidden bg-surface-sunk" title={`Revenue ₦${Number(t.revenue).toLocaleString()}`}>
+                          <div className="h-full bg-clay" style={{ width: `${(t.revenue / trendMaxGmv) * 100}%` }}></div>
+                        </div>
+                      </div>
+                      <p className="m-0 w-24 shrink-0 text-right font-mono text-[11px] tabular-nums text-text-muted">₦{Number(t.revenue).toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 

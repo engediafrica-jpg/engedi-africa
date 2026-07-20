@@ -65,7 +65,10 @@ const roleMenus = {
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
+    { title: 'Bookings', desc: 'Respond to equipment hire requests from clients', href: '/bookings' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+    { title: 'Manage Listings', desc: 'List your equipment for rent', href: '/marketplace' },
+    { title: 'My Orders', desc: 'View and fulfill equipment orders received', href: '/orders' },
   ],
   field_marketer: [
     { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
+import Input from '@/components/Input'
 
 export default function EquipmentProviderProfilePage() {
   const supabase = createClient()
@@ -23,6 +24,15 @@ export default function EquipmentProviderProfilePage() {
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
   const [hoveredStar, setHoveredStar] = useState(0)
+
+  const [showBookingForm, setShowBookingForm] = useState(false)
+  const [jobTitle, setJobTitle] = useState('')
+  const [jobDescription, setJobDescription] = useState('')
+  const [jobLocation, setJobLocation] = useState('')
+  const [preferredDate, setPreferredDate] = useState('')
+  const [budget, setBudget] = useState('')
+  const [submittingBooking, setSubmittingBooking] = useState(false)
+  const [bookingMessage, setBookingMessage] = useState('')
 
   useEffect(() => {
     const getData = async () => {
@@ -59,6 +69,38 @@ export default function EquipmentProviderProfilePage() {
     setMessaging(false)
     setMessageSent(true)
     setTimeout(() => router.push('/messages'), 1000)
+  }
+
+  const handleSubmitBooking = async () => {
+    if (!jobTitle.trim()) { setBookingMessage('Enter what equipment you need'); return }
+    setSubmittingBooking(true)
+    const { error } = await supabase.from('bookings').insert({
+      project_owner_id: currentUser.id,
+      provider_id: profile.id,
+      job_title: jobTitle,
+      job_description: jobDescription,
+      location: jobLocation,
+      preferred_date: preferredDate || null,
+      budget: budget ? Number(budget) : null,
+      status: 'requested',
+    })
+    if (error) { setBookingMessage('Error: ' + error.message); setSubmittingBooking(false); return }
+    await supabase.from('notifications').insert({
+      user_id: profile.id,
+      type: 'booking',
+      title: 'New equipment request',
+      body: `${currentUser.full_name} wants to hire equipment for "${jobTitle}"`,
+      link: '/bookings',
+      is_read: false,
+    })
+    setSubmittingBooking(false)
+    setShowBookingForm(false)
+    setJobTitle('')
+    setJobDescription('')
+    setJobLocation('')
+    setPreferredDate('')
+    setBudget('')
+    setBookingMessage('Request sent! Track its status in your Bookings tab.')
   }
 
   const handleSubmitReview = async () => {
@@ -205,11 +247,54 @@ export default function EquipmentProviderProfilePage() {
         </div>
 
         {currentUser?.id !== profile.id && (
-          <Button className="w-full justify-center" disabled={messaging || messageSent} onClick={handleStartConversation}>
-            {messageSent ? '✓ Conversation started — redirecting...' : messaging ? 'Opening chat...' : `Contact ${profile.company_name || profile.full_name?.split(' ')[0]}`}
-          </Button>
+          <div className="flex flex-wrap gap-2.5">
+            <Button className="min-w-[200px] flex-[2] justify-center" onClick={() => setShowBookingForm(true)}>Request Equipment</Button>
+            <Button variant="outline" className="min-w-[160px] flex-1 justify-center" disabled={messaging || messageSent} onClick={handleStartConversation}>
+              {messageSent ? '✓ Redirecting...' : messaging ? 'Opening chat...' : `Contact`}
+            </Button>
+          </div>
         )}
+        {bookingMessage && !showBookingForm && <p className={`mt-3 text-[13px] font-semibold ${bookingMessage.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{bookingMessage}</p>}
       </div>
+
+      {/* Equipment request modal */}
+      {showBookingForm && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/55 p-6">
+          <div className="ticks max-h-[90vh] w-full max-w-[480px] overflow-y-auto border border-line bg-surface-raised p-8">
+            <h3 className="m-0 mb-2 text-[18px] font-bold text-text">Request Equipment</h3>
+            <p className="m-0 mb-6 text-[14px] text-text-muted">Tell {profile.company_name || profile.full_name?.split(' ')[0]} what equipment you need. They&apos;ll respond with availability and price.</p>
+
+            <div className="mb-3.5">
+              <Input label="Equipment needed" value={jobTitle} onChange={e => setJobTitle(e.target.value)} placeholder="e.g. Excavator for 3-day site clearing" />
+            </div>
+            <div className="mb-3.5">
+              <label className="mb-1.5 block text-[13px] font-semibold text-text">Details</label>
+              <textarea value={jobDescription} onChange={e => setJobDescription(e.target.value)} rows={3} placeholder="Describe the job site, access, and how long you'll need it..."
+                className="w-full resize-y border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay" />
+            </div>
+            <div className="mb-3.5">
+              <Input label="Location" value={jobLocation} onChange={e => setJobLocation(e.target.value)} placeholder="e.g. Lekki, Lagos" />
+            </div>
+            <div className="mb-3.5 flex gap-3">
+              <div className="flex-1">
+                <Input label="Date needed" type="date" value={preferredDate} onChange={e => setPreferredDate(e.target.value)} />
+              </div>
+              <div className="flex-1">
+                <Input label="Budget (₦)" type="number" value={budget} onChange={e => setBudget(e.target.value)} placeholder="Optional — total or daily rate" />
+              </div>
+            </div>
+
+            {bookingMessage && <p className={`mb-3 text-[13px] ${bookingMessage.includes('Error') ? 'text-danger' : 'text-oasis'}`}>{bookingMessage}</p>}
+
+            <div className="flex gap-2.5">
+              <Button variant="outline" className="flex-1 justify-center" onClick={() => { setShowBookingForm(false); setBookingMessage('') }}>Cancel</Button>
+              <Button className="flex-[2] justify-center" disabled={submittingBooking} onClick={handleSubmitBooking}>
+                {submittingBooking ? 'Sending...' : 'Send Request'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

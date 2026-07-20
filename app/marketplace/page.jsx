@@ -10,7 +10,7 @@ import Input from '@/components/Input'
 import useAccessGate from '@/hooks/useAccessGate'
 import LockedNotice from '@/components/LockedNotice'
 
-const categories = ['All', 'Cement', 'Iron Rods', 'Sand', 'Gravel', 'Blocks', 'Roofing', 'Tiles', 'Paint', 'Pipes', 'Electrical', 'Timber', 'Glass', 'Hardware']
+const categories = ['All', 'Cement', 'Iron Rods', 'Sand', 'Gravel', 'Blocks', 'Roofing', 'Tiles', 'Paint', 'Pipes', 'Electrical', 'Timber', 'Glass', 'Hardware', 'Equipment Rental', 'Heavy Machinery', 'Power Tools', 'Scaffolding']
 
 export default function MarketplacePage() {
   const supabase = createClient()
@@ -192,7 +192,7 @@ export default function MarketplacePage() {
           </div>
           <div className="flex flex-wrap gap-2.5">
             <Button href="/orders" variant="outline">My Orders</Button>
-            {profile?.role === 'supplier' && (
+            {['supplier', 'equipment_provider'].includes(profile?.role) && (
               <Button onClick={() => setShowAddForm(!showAddForm)}>+ List a Product</Button>
             )}
           </div>
@@ -252,7 +252,7 @@ export default function MarketplacePage() {
           ? (
             <div className="border border-line bg-surface-raised p-16 text-center">
               <p className="m-0 mb-2 text-[15px] text-text-muted">No products listed yet.</p>
-              {profile?.role === 'supplier' && <p className="m-0 text-[13px] text-text-muted">You can list your first product above.</p>}
+              {['supplier', 'equipment_provider'].includes(profile?.role) && <p className="m-0 text-[13px] text-text-muted">You can list your first product above.</p>}
             </div>
           )
           : (

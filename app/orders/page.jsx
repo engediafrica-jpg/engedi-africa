@@ -108,6 +108,7 @@ export default function OrdersPage() {
             commission_amount: commission,
             payout_amount: payout,
             auto_confirm_at: autoConfirmAt,
+            paid_at: new Date().toISOString(),
           }).eq('id', order.id)
           if (!error) {
             setOrders(orders.map(o => o.id === order.id ? { ...o, payment_status: 'paid', status: 'paid', payment_reference: response.reference, commission_amount: commission, payout_amount: payout } : o))
