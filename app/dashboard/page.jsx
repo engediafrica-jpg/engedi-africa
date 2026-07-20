@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
+import useAccessGate from '@/hooks/useAccessGate'
 
 const roleMenus = {
   project_owner: [
@@ -66,6 +67,10 @@ const roleMenus = {
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
   ],
+  field_marketer: [
+    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
+    { title: 'Referral Dashboard', desc: 'Your referral link, signups, and payment history', href: '/marketer' },
+  ],
 }
 
 const roleWelcome = {
@@ -75,6 +80,7 @@ const roleWelcome = {
   professional: { title: 'Professional', tip: 'Showcase your credentials, answer questions, and connect with clients who need your expertise.' },
   service_provider: { title: 'Service Provider', tip: 'Get verified and connect with project owners who need your services.' },
   equipment_provider: { title: 'Equipment Provider', tip: 'List your equipment and connect with construction projects that need it.' },
+  field_marketer: { title: 'Field Marketer', tip: 'Share your referral link and track everyone who joins through it.' },
 }
 
 export default function DashboardPage() {
@@ -125,13 +131,20 @@ export default function DashboardPage() {
     setNotifications([])
   }
 
+  const { locked } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
 
-  const menuItems = roleMenus[profile?.role] || roleMenus.project_owner
+  const allMenuItems = roleMenus[profile?.role] || roleMenus.project_owner
+  const menuItems = allMenuItems.filter(item => {
+    if (locked === 'profile') return item.href === '/dashboard/profile'
+    if (locked === 'training') return item.href === '/dashboard/profile' || item.href === '/training'
+    return true
+  })
   const roleInfo = roleWelcome[profile?.role] || roleWelcome.project_owner
   const isVerified = profile?.verification_status === 'approved'
   const isProfileComplete = profile?.profile_completed === true
@@ -271,7 +284,7 @@ export default function DashboardPage() {
         )}
 
         {/* Artisan training prompt */}
-        {profile?.role === 'artisan' && (
+        {profile?.role === 'artisan' && locked === 'training' && (
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-ink p-5">
             <div>
               <p className="m-0 mb-1 text-[15px] font-bold text-ink-text">Complete your training</p>

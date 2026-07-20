@@ -30,6 +30,13 @@ export default function AdminPage() {
   const [resolutionNotes, setResolutionNotes] = useState({})
   const [disputeMessage, setDisputeMessage] = useState('')
   const [openDisputeCount, setOpenDisputeCount] = useState(0)
+  const [marketerForm, setMarketerForm] = useState({ full_name: '', email: '', password: '' })
+  const [creatingMarketer, setCreatingMarketer] = useState(false)
+  const [marketerMessage, setMarketerMessage] = useState('')
+  const [marketerPayments, setMarketerPayments] = useState([])
+  const [paymentsLoading, setPaymentsLoading] = useState(false)
+  const [paymentForm, setPaymentForm] = useState({ marketer_id: '', month: '', amount: '', note: '' })
+  const [loggingPayment, setLoggingPayment] = useState(false)
 
   useEffect(() => {
     const getData = async () => {
@@ -56,6 +63,62 @@ export default function AdminPage() {
       .order('created_at', { ascending: false })
     setTraining(data || [])
     setTrainingLoading(false)
+  }
+
+  const loadMarketerPayments = async () => {
+    setPaymentsLoading(true)
+    const { data } = await supabase
+      .from('marketer_payments')
+      .select('*')
+      .order('month', { ascending: false })
+    setMarketerPayments(data || [])
+    setPaymentsLoading(false)
+  }
+
+  const handleCreateMarketer = async () => {
+    setMarketerMessage('')
+    if (!marketerForm.full_name || !marketerForm.email || !marketerForm.password) {
+      setMarketerMessage('Please fill all fields')
+      return
+    }
+    setCreatingMarketer(true)
+    try {
+      const res = await fetch('/api/admin/create-marketer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(marketerForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setMarketerMessage('Error: ' + data.error); setCreatingMarketer(false); return }
+      const { data: refreshed } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      setUsers(refreshed || [])
+      setMarketerForm({ full_name: '', email: '', password: '' })
+      setMarketerMessage(`Marketer created — referral code ${data.referral_code}`)
+    } catch (error) {
+      setMarketerMessage('Error: ' + error.message)
+    }
+    setCreatingMarketer(false)
+  }
+
+  const handleLogPayment = async () => {
+    setMarketerMessage('')
+    if (!paymentForm.marketer_id || !paymentForm.month || !paymentForm.amount) {
+      setMarketerMessage('Please select a marketer and fill month + amount')
+      return
+    }
+    setLoggingPayment(true)
+    const { error } = await supabase.from('marketer_payments').insert({
+      marketer_id: paymentForm.marketer_id,
+      month: `${paymentForm.month}-01`,
+      amount: Number(paymentForm.amount),
+      note: paymentForm.note,
+      created_by: admin.id,
+    })
+    setLoggingPayment(false)
+    if (error) { setMarketerMessage('Error: ' + error.message); return }
+    setPaymentForm({ marketer_id: '', month: '', amount: '', note: '' })
+    setMarketerMessage('Payment logged')
+    loadMarketerPayments()
   }
 
   const loadDisputes = async () => {
@@ -197,7 +260,14 @@ export default function AdminPage() {
     professional: 'Professional',
     service_provider: 'Service Provider',
     equipment_provider: 'Equipment Provider',
+    field_marketer: 'Field Marketer',
   }
+
+  const marketers = users.filter(u => u.role === 'field_marketer')
+  const referredCounts = users.reduce((acc, u) => {
+    if (u.referred_by_marketer_id) acc[u.referred_by_marketer_id] = (acc[u.referred_by_marketer_id] || 0) + 1
+    return acc
+  }, {})
 
   // Group training by user
   const trainingByUser = training.reduce((acc, t) => {
@@ -244,6 +314,7 @@ export default function AdminPage() {
             { key: 'pending', label: `Pending Review (${pendingVerification.length})` },
             { key: 'disputes', label: `Disputes${openDisputeCount ? ` (${openDisputeCount})` : ''}` },
             { key: 'training', label: 'Training Progress' },
+            { key: 'marketers', label: `Field Marketers (${marketers.length})` },
           ].map(tab => (
             <button
               key={tab.key}
@@ -251,6 +322,7 @@ export default function AdminPage() {
                 setActiveTab(tab.key)
                 if (tab.key === 'training' && training.length === 0) loadTraining()
                 if (tab.key === 'disputes') loadDisputes()
+                if (tab.key === 'marketers' && marketerPayments.length === 0) loadMarketerPayments()
               }}
               className={`border px-5 py-2.5 text-[13px] font-bold ${activeTab === tab.key ? 'border-text bg-text text-surface' : 'border-line-strong text-text-muted hover:border-text'}`}
             >
@@ -371,6 +443,101 @@ export default function AdminPage() {
                 })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Field Marketers tab */}
+        {activeTab === 'marketers' && (
+          <div>
+            {marketerMessage && (
+              <p className={`mb-4 text-[13px] font-semibold ${marketerMessage.includes('Error') || marketerMessage.includes('Please') ? 'text-danger' : 'text-oasis'}`}>
+                {marketerMessage}
+              </p>
+            )}
+
+            {/* Create marketer */}
+            <div className="ticks mb-6 border border-line bg-surface-raised p-6">
+              <p className="mb-4 text-[15px] font-bold text-text">Create Field Marketer</p>
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Input label="Full Name" value={marketerForm.full_name} onChange={e => setMarketerForm({ ...marketerForm, full_name: e.target.value })} placeholder="Marketer's name" />
+                <Input label="Email" type="email" value={marketerForm.email} onChange={e => setMarketerForm({ ...marketerForm, email: e.target.value })} placeholder="marketer@email.com" />
+                <Input label="Password" type="password" value={marketerForm.password} onChange={e => setMarketerForm({ ...marketerForm, password: e.target.value })} placeholder="Set initial password" />
+              </div>
+              <Button disabled={creatingMarketer} onClick={handleCreateMarketer}>
+                {creatingMarketer ? 'Creating...' : 'Create Marketer'}
+              </Button>
+            </div>
+
+            {/* Marketers list */}
+            <div className="mb-6 flex flex-col gap-3">
+              {marketers.length === 0 ? (
+                <div className="border border-line bg-surface-raised p-10 text-center">
+                  <p className="m-0 text-[15px] text-text-muted">No field marketers yet.</p>
+                </div>
+              ) : marketers.map(m => (
+                <div key={m.id} className="border border-line bg-surface-raised p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="m-0 mb-1 text-[15px] font-bold text-text">{m.full_name}</p>
+                      <p className="m-0 mb-1 text-[13px] text-text-muted">{m.email}</p>
+                      <p className="m-0 font-mono text-[13px] text-clay">engediafrica.com/signup?ref={m.referral_code}</p>
+                    </div>
+                    <Badge tone="pending">{referredCounts[m.id] || 0} signups</Badge>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Log a monthly payment */}
+            <div className="ticks mb-6 border border-line bg-surface-raised p-6">
+              <p className="mb-4 text-[15px] font-bold text-text">Log Monthly Payment</p>
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
+                <div>
+                  <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Marketer</label>
+                  <select
+                    value={paymentForm.marketer_id}
+                    onChange={e => setPaymentForm({ ...paymentForm, marketer_id: e.target.value })}
+                    className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[0.95rem] text-text outline-none focus:border-clay"
+                  >
+                    <option value="">Select marketer</option>
+                    {marketers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+                  </select>
+                </div>
+                <Input label="Month" type="month" value={paymentForm.month} onChange={e => setPaymentForm({ ...paymentForm, month: e.target.value })} />
+                <Input label="Amount (₦)" type="number" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} placeholder="e.g. 15000" />
+                <Input label="Note (optional)" value={paymentForm.note} onChange={e => setPaymentForm({ ...paymentForm, note: e.target.value })} placeholder="Transport + stipend" />
+              </div>
+              <Button disabled={loggingPayment} onClick={handleLogPayment}>
+                {loggingPayment ? 'Logging...' : 'Log Payment'}
+              </Button>
+            </div>
+
+            {/* Payment history */}
+            <div>
+              <p className="mb-3 text-[14px] font-bold text-text">Payment History</p>
+              {paymentsLoading ? (
+                <p className="text-text-muted">Loading payments...</p>
+              ) : marketerPayments.length === 0 ? (
+                <div className="border border-line bg-surface-raised p-10 text-center">
+                  <p className="m-0 text-[15px] text-text-muted">No payments logged yet.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  {marketerPayments.map(p => {
+                    const marketer = users.find(u => u.id === p.marketer_id)
+                    return (
+                      <div key={p.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-surface-raised px-4 py-3">
+                        <div>
+                          <p className="m-0 text-[14px] font-bold text-text">{marketer?.full_name || 'Unknown marketer'}</p>
+                          <p className="m-0 text-[12px] text-text-muted">{new Date(p.month).toLocaleDateString('en-NG', { month: 'long', year: 'numeric' })}{p.note ? ` · ${p.note}` : ''}</p>
+                        </div>
+                        <p className="m-0 font-mono text-[14px] font-bold text-text">₦{Number(p.amount).toLocaleString()}</p>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         )}
 

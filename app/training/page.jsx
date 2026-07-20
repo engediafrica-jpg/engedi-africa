@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 const modules = [
   {
@@ -163,11 +165,21 @@ export default function TrainingPage() {
 
   const allCompleted = completedModules.length === modules.length
 
+  const { locked, checking } = useAccessGate(profile, { allowIncompleteTraining: true })
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   return (
     <div className="min-h-screen bg-surface">

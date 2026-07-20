@@ -4,6 +4,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 export default function MessagesPage() {
   const supabase = createClient()
@@ -97,11 +99,21 @@ export default function MessagesPage() {
     return conv.participant_one?.id === profile.id ? conv.participant_two : conv.participant_one
   }
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   return (
     <div className="flex min-h-screen flex-col bg-surface">

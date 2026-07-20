@@ -6,6 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 const stageStatusOptions = ['pending', 'in_progress', 'completed']
 const stageStatusTone = {
@@ -95,11 +97,21 @@ export default function ProjectDetailPage() {
     return Math.round((stages.filter(s => s.status === 'completed').length / stages.length) * 100)
   }
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   const progress = getProgress()
   const isOwner = profile?.id === project?.owner_id

@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Badge from '@/components/Badge'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 export default function VerificationPage() {
   const supabase = createClient()
@@ -84,11 +86,21 @@ export default function VerificationPage() {
     </div>
   )
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   const statusTone = {
     approved: 'success',

@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Input from '@/components/Input'
 import Button from '@/components/Button'
+import { computeProfileCompleted, getMissingFields, requiresCompanyName } from '@/lib/profileCompletion'
 
 export default function ProfilePage() {
   const supabase = createClient()
@@ -36,6 +37,7 @@ export default function ProfilePage() {
     setSaving(true)
     setMessage('')
     if (!userId) { setMessage('Not logged in. Please refresh.'); setSaving(false); return }
+    const profileCompleted = computeProfileCompleted(profile)
     const { error } = await supabase.from('profiles').update({
       full_name: profile.full_name,
       phone: profile.phone,
@@ -45,11 +47,16 @@ export default function ProfilePage() {
       address_line: profile.address_line,
       company_name: profile.company_name,
       experience_years: profile.experience_years ? Number(profile.experience_years) : null,
-      profile_completed: true,
+      profile_completed: profileCompleted,
     }).eq('id', userId)
     setSaving(false)
     if (error) { setMessage('Error: ' + error.message); return }
-    setMessage('Profile saved successfully!')
+    if (profileCompleted) {
+      setMessage('Profile saved successfully!')
+    } else {
+      const missing = getMissingFields(profile)
+      setMessage(`Profile saved — still missing: ${missing.join(', ')}`)
+    }
   }
 
   const handleAvatarUpload = async (e) => {
@@ -94,7 +101,7 @@ export default function ProfilePage() {
     { label: 'City', key: 'city', type: 'text', placeholder: 'e.g. Lagos' },
     { label: 'State', key: 'state', type: 'text', placeholder: 'e.g. Lagos State' },
     { label: 'Address', key: 'address_line', type: 'text', placeholder: 'Your street address' },
-    { label: 'Company Name (optional)', key: 'company_name', type: 'text', placeholder: 'Your business name' },
+    { label: requiresCompanyName(profile?.role) ? 'Company Name' : 'Company Name (optional)', key: 'company_name', type: 'text', placeholder: 'Your business name' },
     { label: 'Years of Experience', key: 'experience_years', type: 'number', placeholder: 'e.g. 5' },
   ]
 
@@ -157,7 +164,7 @@ export default function ProfilePage() {
           </div>
 
           {message && (
-            <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') ? 'text-danger' : 'text-oasis'}`}>
+            <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') ? 'text-danger' : message.includes('still missing') ? 'text-clay' : 'text-oasis'}`}>
               {message}
             </p>
           )}

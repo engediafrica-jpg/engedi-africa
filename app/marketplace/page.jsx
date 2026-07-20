@@ -7,6 +7,8 @@ import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
 import Input from '@/components/Input'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 const categories = ['All', 'Cement', 'Iron Rods', 'Sand', 'Gravel', 'Blocks', 'Roofing', 'Tiles', 'Paint', 'Pipes', 'Electrical', 'Timber', 'Glass', 'Hardware']
 
@@ -108,11 +110,21 @@ export default function MarketplacePage() {
     setPlacingOrder(false)
   }
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   return (
     <div className="min-h-screen bg-surface">

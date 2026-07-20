@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 export default function WalletPage() {
   const supabase = createClient()
@@ -107,11 +109,21 @@ export default function WalletPage() {
     .filter(t => t.status === 'success')
     .reduce((sum, t) => sum + Number(t.amount), 0)
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return (
     <div className="flex min-h-screen items-center justify-center bg-surface">
       <p className="text-text-muted">Loading...</p>
     </div>
   )
+
+  if (checking) return (
+    <div className="flex min-h-screen items-center justify-center bg-surface">
+      <p className="text-text-muted">Loading...</p>
+    </div>
+  )
+
+  if (locked) return <LockedNotice reason={locked} />
 
   return (
     <div className="min-h-screen bg-surface">

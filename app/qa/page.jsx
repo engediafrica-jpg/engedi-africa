@@ -7,6 +7,8 @@ import AppNav from '@/components/AppNav'
 import Button from '@/components/Button'
 import Badge from '@/components/Badge'
 import Input from '@/components/Input'
+import useAccessGate from '@/hooks/useAccessGate'
+import LockedNotice from '@/components/LockedNotice'
 
 export default function QAPage() {
   const supabase = createClient()
@@ -68,7 +70,11 @@ export default function QAPage() {
     setPosting(false)
   }
 
+  const { locked, checking } = useAccessGate(profile)
+
   if (loading) return <div className="flex min-h-screen items-center justify-center bg-surface"><p className="text-text-muted">Loading...</p></div>
+  if (checking) return <div className="flex min-h-screen items-center justify-center bg-surface"><p className="text-text-muted">Loading...</p></div>
+  if (locked) return <LockedNotice reason={locked} />
 
   return (
     <div className="min-h-screen bg-surface">

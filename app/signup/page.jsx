@@ -1,6 +1,7 @@
 'use client'
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import AuthShell from '@/components/AuthShell'
 import Input from '@/components/Input'
@@ -15,10 +16,11 @@ const roles = [
   { value: 'equipment_provider', label: 'Equipment Provider', desc: 'I rent out equipment' },
 ]
 
-export default function SignupPage() {
+function SignupForm() {
   const supabase = createClient()
+  const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: '', ref: searchParams.get('ref') || '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
@@ -36,6 +38,17 @@ export default function SignupPage() {
     })
     if (error) { setError(error.message); setLoading(false); return }
     await supabase.from('profiles').update({ full_name: form.full_name, role: form.role }).eq('email', form.email)
+    if (form.ref) {
+      const { data: marketer } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('referral_code', form.ref)
+        .eq('role', 'field_marketer')
+        .single()
+      if (marketer) {
+        await supabase.from('profiles').update({ referred_by_marketer_id: marketer.id }).eq('email', form.email)
+      }
+    }
     setLoading(false)
     setDone(true)
   }
@@ -126,5 +139,13 @@ export default function SignupPage() {
         </div>
       )}
     </AuthShell>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupForm />
+    </Suspense>
   )
 }
