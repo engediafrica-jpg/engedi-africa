@@ -597,7 +597,7 @@ export default function BookingsPage() {
                         </>
                       )}
                       {booking.status === 'completed' && (
-                        <Button href={`/${booking.provider?.role === 'artisan' ? 'artisans' : booking.provider?.role === 'professional' ? 'professionals' : 'service-providers'}/${booking.provider_id}`}>
+                        <Button href={`/${booking.provider?.role === 'artisan' ? 'artisans' : booking.provider?.role === 'professional' ? 'professionals' : booking.provider?.role === 'equipment_provider' ? 'equipment-providers' : 'service-providers'}/${booking.provider_id}`}>
                           Leave a Review
                         </Button>
                       )}
