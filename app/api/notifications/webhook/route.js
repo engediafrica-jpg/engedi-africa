@@ -51,24 +51,29 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const payload = await request.json()
-  const record = payload?.record
-  if (!record || SKIP_TYPES.includes(record.type)) {
-    return NextResponse.json({ skipped: true })
+  try {
+    const payload = await request.json()
+    const record = payload?.record
+    if (!record || SKIP_TYPES.includes(record.type)) {
+      return NextResponse.json({ skipped: true })
+    }
+
+    const supabase = createAdminClient()
+    const { data: user, error: userError } = await supabase.from('profiles').select('email, full_name').eq('id', record.user_id).single()
+    if (userError || !user?.email) {
+      return NextResponse.json({ skipped: true, reason: userError?.message || 'no email on profile' })
+    }
+
+    await sendEmail({
+      to: user.email,
+      toName: user.full_name,
+      subject: record.title || 'New notification from EnGedi Africa',
+      html: buildEmailHtml(record),
+    })
+
+    return NextResponse.json({ sent: true })
+  } catch (error) {
+    console.error('Notification webhook error:', error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
   }
-
-  const supabase = createAdminClient()
-  const { data: user } = await supabase.from('profiles').select('email, full_name').eq('id', record.user_id).single()
-  if (!user?.email) {
-    return NextResponse.json({ skipped: true })
-  }
-
-  await sendEmail({
-    to: user.email,
-    toName: user.full_name,
-    subject: record.title || 'New notification from EnGedi Africa',
-    html: buildEmailHtml(record),
-  })
-
-  return NextResponse.json({ sent: true })
 }
