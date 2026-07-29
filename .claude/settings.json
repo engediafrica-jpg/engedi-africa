@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -w \"\\\\nstatus: %{http_code}\\\\n\" -X POST http://localhost:3000/api/admin/create-marketer -H \"Content-Type: application/json\" -d '{\"full_name\":\"Test\",\"email\":\"test@test.com\",\"password\":\"testpass123\"}')",
+      "Bash(pkill -f \"next dev\")",
+      "Bash(pkill -f \"next-server\")",
+      "Bash(rm -rf .next)",
+      "Bash(curl -s -X POST http://localhost:3001/api/admin/create-marketer -H \"Content-Type: application/json\" -d '{\"full_name\":\"Test\",\"email\":\"test@test.com\",\"password\":\"testpass123\"}')",
+      "Bash(curl -s -o /dev/null -w \"\\\\ndashboard: %{http_code}\\\\n\" http://localhost:3001/dashboard)",
+      "Bash(curl -s -o /dev/null -w \"marketer: %{http_code}\\\\n\" http://localhost:3001/marketer)",
+      "Bash(curl -s -o /dev/null -w \"signup?ref=FM001: %{http_code}\\\\n\" \"http://localhost:3001/signup?ref=FM001\")",
+      "Bash(curl -s -o /dev/null -w \"training: %{http_code}\\\\n\" http://localhost:3001/training)",
+      "Bash(node -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(export NOTIFICATIONS_WEBHOOK_SECRET=test123)",
+      "Bash(nohup npx next dev -p 3052)",
+      "Bash(disown)",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3052/api/notifications/webhook -H 'Content-Type: application/json' -d '{\"record\":{\"user_id\":\"x\",\"type\":\"booking\",\"title\":\"t\",\"body\":\"b\"}}')",
+      "Bash(curl -s -w '\\\\nHTTP %{http_code}\\\\n' -X POST http://localhost:3052/api/notifications/webhook -H 'Content-Type: application/json' -H 'x-webhook-secret: wrong' -d '{\"record\":{\"user_id\":\"x\",\"type\":\"booking\",\"title\":\"t\",\"body\":\"b\"}}')",
+      "Bash(NOTIFICATIONS_WEBHOOK_SECRET=test123 npx next dev -p 3053)"
+    ]
+  }
+}
