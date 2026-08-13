@@ -3,10 +3,20 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import AppNav from '@/components/AppNav'
-import Button from '@/components/Button'
-import useAccessGate from '@/hooks/useAccessGate'
-import LockedNotice from '@/components/LockedNotice'
+
+const C = {
+  surface: '#15120e',
+  raised: '#201a14',
+  sunk: '#0f0c09',
+  text: '#f1eae0',
+  muted: '#a79a85',
+  line: '#362d22',
+  clay: '#e08554',
+  clayDeep: '#b85c38',
+  oasis: '#86a98b',
+  danger: '#e2695f',
+  dangerSoft: '#2e1712',
+}
 
 export default function BankDetailsPage() {
   const supabase = createClient()
@@ -18,12 +28,7 @@ export default function BankDetailsPage() {
   const [saving, setSaving] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [message, setMessage] = useState('')
-  const [form, setForm] = useState({
-    bank_name: '',
-    bank_code: '',
-    bank_account_number: '',
-    bank_account_name: '',
-  })
+  const [form, setForm] = useState({ bank_name: '', bank_code: '', bank_account_number: '', bank_account_name: '' })
   const [accountVerified, setAccountVerified] = useState(false)
 
   useEffect(() => {
@@ -59,16 +64,19 @@ export default function BankDetailsPage() {
     if (!form.bank_code) { setMessage('Please select a bank'); return }
     setVerifying(true)
     setMessage('')
-    const res = await fetch(`https://api.paystack.co/bank/resolve?account_number=${form.bank_account_number}&bank_code=${form.bank_code}`, {
-      headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY}` }
-    })
-    const data = await res.json()
-    if (data.status && data.data?.account_name) {
-      setForm({ ...form, bank_account_name: data.data.account_name })
-      setAccountVerified(true)
-      setMessage('Account verified: ' + data.data.account_name)
-    } else {
-      setMessage('Could not verify account. Please check your details.')
+    try {
+      const res = await fetch(`/api/paystack/resolve?account_number=${form.bank_account_number}&bank_code=${form.bank_code}`)
+      const data = await res.json()
+      if (data.status && data.data?.account_name) {
+        setForm(prev => ({ ...prev, bank_account_name: data.data.account_name }))
+        setAccountVerified(true)
+        setMessage('✓ Account verified: ' + data.data.account_name)
+      } else {
+        setMessage('Could not verify account. Check your details and try again.')
+        setAccountVerified(false)
+      }
+    } catch (err) {
+      setMessage('Verification failed. Please try again.')
       setAccountVerified(false)
     }
     setVerifying(false)
@@ -78,25 +86,25 @@ export default function BankDetailsPage() {
     if (!accountVerified) { setMessage('Please verify your account number first'); return }
     setSaving(true)
     setMessage('')
+    const selectedBank = banks.find(b => b.code === form.bank_code)
 
     // Create Paystack transfer recipient
-    const selectedBank = banks.find(b => b.code === form.bank_code)
-    const recipientRes = await fetch('https://api.paystack.co/transferrecipient', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        type: 'nuban',
-        name: form.bank_account_name,
-        account_number: form.bank_account_number,
-        bank_code: form.bank_code,
-        currency: 'NGN',
+    let recipientCode = null
+    try {
+      const recipientRes = await fetch('/api/paystack/transfer-recipient', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.bank_account_name,
+          account_number: form.bank_account_number,
+          bank_code: form.bank_code,
+        }),
       })
-    })
-    const recipientData = await recipientRes.json()
-    const recipientCode = recipientData.data?.recipient_code || null
+      const recipientData = await recipientRes.json()
+      recipientCode = recipientData.data?.recipient_code || null
+    } catch (err) {
+      console.log('Recipient creation failed:', err)
+    }
 
     const { error } = await supabase.from('profiles').update({
       bank_name: selectedBank?.name || form.bank_name,
@@ -107,106 +115,108 @@ export default function BankDetailsPage() {
 
     setSaving(false)
     if (error) { setMessage('Error saving: ' + error.message); return }
-    setMessage('Bank details saved successfully!')
+    setProfile({ ...profile, bank_name: selectedBank?.name, bank_account_number: form.bank_account_number, bank_account_name: form.bank_account_name })
+    setMessage('✓ Bank details saved successfully!')
   }
 
-  const { locked, checking } = useAccessGate(profile)
+  const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
 
   if (loading) return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
-      <p className="text-text-muted">Loading...</p>
+    <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: C.muted }}>Loading...</p>
     </div>
   )
-
-  if (checking) return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
-      <p className="text-text-muted">Loading...</p>
-    </div>
-  )
-
-  if (locked) return <LockedNotice reason={locked} />
 
   return (
-    <div className="min-h-screen bg-surface">
-      <AppNav right={<Link href="/dashboard" className="text-[13px] text-ink-muted no-underline hover:text-ink-text">← Dashboard</Link>} />
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text }}>
+      <div style={{ background: C.sunk, borderBottom: `1px solid ${C.line}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ color: C.clay, textDecoration: 'none', fontWeight: '800', fontSize: '18px' }}>EnGedi Africa</Link>
+        <Link href="/dashboard" style={{ color: C.muted, textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
+      </div>
 
-      <div className="mx-auto max-w-[600px] px-6 py-10">
-        <h1 className="mb-2 text-[24px] font-bold">Bank Details</h1>
-        <p className="mb-8 text-[14px] text-text-muted">Add your bank account to receive payments from EnGedi Africa</p>
+      <div style={{ maxWidth: '580px', margin: '0 auto', padding: '40px 24px' }}>
+        <h1 style={{ fontSize: '24px', fontWeight: '800', color: C.text, marginBottom: '8px' }}>Bank Details</h1>
+        <p style={{ color: C.muted, fontSize: '14px', marginBottom: '32px' }}>Add your bank account to receive payments from EnGedi Africa</p>
 
         {/* Current details */}
         {profile?.bank_account_name && (
-          <div className="mb-6 border border-oasis bg-oasis-soft p-5">
-            <p className="m-0 mb-2 text-[15px] font-bold text-oasis">✓ Bank account on file</p>
-            <p className="m-0 mb-1 text-[14px] text-text-muted"><strong className="text-text">Bank:</strong> {profile.bank_name}</p>
-            <p className="m-0 mb-1 text-[14px] text-text-muted"><strong className="text-text">Account Name:</strong> {profile.bank_account_name}</p>
-            <p className="m-0 text-[14px] text-text-muted"><strong className="text-text">Account Number:</strong> {profile.bank_account_number?.replace(/(\d{6})(\d{4})/, '******$2')}</p>
+          <div style={{ background: '#1a2e1d', border: `1px solid ${C.oasis}44`, borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+            <p style={{ fontWeight: '700', color: C.oasis, margin: '0 0 10px', fontSize: '14px' }}>✓ Bank account on file</p>
+            <p style={{ color: C.muted, fontSize: '14px', margin: '0 0 4px' }}><span style={{ color: C.text, fontWeight: '600' }}>Bank:</span> {profile.bank_name}</p>
+            <p style={{ color: C.muted, fontSize: '14px', margin: '0 0 4px' }}><span style={{ color: C.text, fontWeight: '600' }}>Account Name:</span> {profile.bank_account_name}</p>
+            <p style={{ color: C.muted, fontSize: '14px', margin: 0 }}><span style={{ color: C.text, fontWeight: '600' }}>Account Number:</span> {profile.bank_account_number?.replace(/(\d{6})(\d{4})/, '******$2')}</p>
           </div>
         )}
 
-        <div className="ticks border border-line bg-surface-raised p-8">
-          <div className="mb-4">
-            <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Select Bank</label>
+        <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '32px' }}>
+
+          {/* Bank select */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Select Bank</label>
             <select
               value={form.bank_code}
               onChange={e => {
                 const selected = banks.find(b => b.code === e.target.value)
-                setForm({ ...form, bank_code: e.target.value, bank_name: selected?.name || '' })
-                setAccountVerified(false)
                 setForm(prev => ({ ...prev, bank_code: e.target.value, bank_name: selected?.name || '', bank_account_name: '' }))
+                setAccountVerified(false)
               }}
-              className="w-full border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
+              style={{ ...inputStyle, appearance: 'none' }}
             >
-              <option value="">Select your bank...</option>
+              <option value="" style={{ background: C.sunk }}>Select your bank...</option>
               {banks.map(bank => (
-                <option key={bank.code} value={bank.code}>{bank.name}</option>
+                <option key={bank.code} value={bank.code} style={{ background: C.sunk }}>{bank.name}</option>
               ))}
             </select>
           </div>
 
-          <div className="mb-4">
-            <label className="mb-1.5 block text-[0.8rem] font-semibold text-text">Account Number</label>
-            <div className="flex gap-2.5">
+          {/* Account number + verify */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account Number</label>
+            <div style={{ display: 'flex', gap: '10px' }}>
               <input
                 type="text"
                 placeholder="10-digit account number"
                 value={form.bank_account_number}
                 onChange={e => {
-                  setForm({ ...form, bank_account_number: e.target.value, bank_account_name: '' })
+                  setForm(prev => ({ ...prev, bank_account_number: e.target.value, bank_account_name: '' }))
                   setAccountVerified(false)
                 }}
                 maxLength={10}
-                className="flex-1 border border-line bg-surface-raised px-3.5 py-3 text-[14px] text-text outline-none focus:border-clay"
+                style={{ ...inputStyle, flex: 1 }}
               />
-              <Button
+              <button
                 onClick={handleVerifyAccount}
                 disabled={verifying || form.bank_account_number.length !== 10 || !form.bank_code}
-                variant="outline"
-                className="whitespace-nowrap text-[13px]"
+                style={{ background: verifying ? C.line : form.bank_account_number.length === 10 && form.bank_code ? C.clay : C.line, color: verifying || !form.bank_code || form.bank_account_number.length !== 10 ? C.muted : C.sunk, border: 'none', padding: '12px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: verifying || !form.bank_code || form.bank_account_number.length !== 10 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
               >
                 {verifying ? 'Checking...' : 'Verify'}
-              </Button>
+              </button>
             </div>
           </div>
 
+          {/* Verified account name */}
           {form.bank_account_name && (
-            <div className="mb-4 border border-oasis bg-oasis-soft px-4 py-3">
-              <p className="m-0 text-[14px] font-bold text-oasis">✓ {form.bank_account_name}</p>
+            <div style={{ background: '#1a2e1d', border: `1px solid ${C.oasis}44`, borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+              <p style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: C.oasis }}>✓ {form.bank_account_name}</p>
             </div>
           )}
 
           {message && (
-            <p className={`mb-4 text-[13px] font-semibold ${message.includes('Error') || message.includes('not') || message.includes('check') ? 'text-danger' : 'text-oasis'}`}>
+            <p style={{ color: message.includes('✓') ? C.oasis : C.danger, fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>
               {message}
             </p>
           )}
 
-          <Button onClick={handleSave} disabled={saving || !accountVerified} className="w-full justify-center">
+          <button
+            onClick={handleSave}
+            disabled={saving || !accountVerified}
+            style={{ width: '100%', background: saving || !accountVerified ? C.line : C.clay, color: saving || !accountVerified ? C.muted : C.sunk, border: 'none', padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: saving || !accountVerified ? 'not-allowed' : 'pointer' }}
+          >
             {saving ? 'Saving...' : 'Save Bank Details'}
-          </Button>
+          </button>
 
-          <p className="mt-3 text-center text-[12px] leading-relaxed text-text-muted">
-            Your bank details are encrypted and only used to send you payments from EnGedi Africa.
+          <p style={{ color: C.muted, fontSize: '12px', marginTop: '12px', textAlign: 'center', lineHeight: '1.6' }}>
+            Your details are only used to send you payments from EnGedi Africa.
           </p>
         </div>
       </div>
