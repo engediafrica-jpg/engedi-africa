@@ -3,10 +3,21 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import AppNav from '@/components/AppNav'
-import Button from '@/components/Button'
-import Badge from '@/components/Badge'
-import useAccessGate from '@/hooks/useAccessGate'
+
+const C = {
+  surface: '#15120e',
+  raised: '#201a14',
+  sunk: '#0f0c09',
+  text: '#f1eae0',
+  muted: '#a79a85',
+  line: '#362d22',
+  lineStrong: '#4a3d2c',
+  clay: '#e08554',
+  clayDeep: '#b85c38',
+  oasis: '#86a98b',
+  danger: '#e2695f',
+  dangerSoft: '#2e1712',
+}
 
 const roleMenus = {
   project_owner: [
@@ -18,7 +29,7 @@ const roleMenus = {
     { title: 'Browse Professionals', desc: 'Find artisans, suppliers and professionals', href: '/browse' },
     { title: 'Marketplace', desc: 'Browse and compare building materials', href: '/marketplace' },
     { title: 'My Orders', desc: 'Track your material orders', href: '/orders' },
-    { title: 'Bookings', desc: 'Track quote requests and hired jobs', href: '/bookings' },
+    { title: 'My Bookings', desc: 'Manage your job requests', href: '/bookings' },
     { title: 'Project Hub', desc: 'Manage your construction projects', href: '/projects' },
   ],
   artisan: [
@@ -26,9 +37,9 @@ const roleMenus = {
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
-    { title: 'Bookings', desc: 'Respond to job requests from clients', href: '/bookings' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
     { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
+    { title: 'My Bookings', desc: 'View and manage job requests', href: '/bookings' },
     { title: 'Training Hub', desc: 'Learn skills and earn certificates', href: '/training' },
   ],
   supplier: [
@@ -45,9 +56,9 @@ const roleMenus = {
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
-    { title: 'Bookings', desc: 'Respond to job requests from clients', href: '/bookings' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
     { title: 'Q&A Forum', desc: 'Answer construction questions', href: '/qa' },
+    { title: 'My Bookings', desc: 'View and manage client requests', href: '/bookings' },
     { title: 'Marketplace', desc: 'Browse building materials', href: '/marketplace' },
     { title: 'Project Hub', desc: 'Manage client projects', href: '/projects' },
   ],
@@ -56,8 +67,8 @@ const roleMenus = {
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
-    { title: 'Bookings', desc: 'Respond to job requests from clients', href: '/bookings' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
+    { title: 'My Bookings', desc: 'View and manage service requests', href: '/bookings' },
     { title: 'Project Hub', desc: 'Manage service projects', href: '/projects' },
   ],
   equipment_provider: [
@@ -65,25 +76,22 @@ const roleMenus = {
     { title: 'Verification', desc: 'Upload your documents', href: '/dashboard/verification' },
     { title: 'Wallet', desc: 'Manage payments', href: '/dashboard/wallet' },
     { title: 'Bank Details', desc: 'Add your account to receive payments', href: '/dashboard/bank-details' },
-    { title: 'Bookings', desc: 'Respond to equipment hire requests from clients', href: '/bookings' },
     { title: 'Messages', desc: 'Chat with clients', href: '/messages' },
-    { title: 'Manage Listings', desc: 'List your equipment for rent', href: '/marketplace' },
-    { title: 'My Orders', desc: 'View and fulfill equipment orders received', href: '/orders' },
   ],
   field_marketer: [
-    { title: 'My Profile', desc: 'Edit your details and avatar', href: '/dashboard/profile' },
-    { title: 'Referral Dashboard', desc: 'Your referral link, signups, and payment history', href: '/marketer' },
+    { title: 'My Dashboard', desc: 'View your referrals and earnings', href: '/field-marketer' },
+    { title: 'My Profile', desc: 'Edit your details', href: '/dashboard/profile' },
   ],
 }
 
 const roleWelcome = {
-  project_owner: { title: 'Project Owner', tip: 'Browse verified artisans, compare material prices, and manage your build — all in one place.' },
-  artisan: { title: 'Artisan', tip: 'Complete your profile and get verified to start receiving job enquiries from project owners.' },
+  project_owner: { title: 'Project Owner', tip: 'Browse verified artisans, compare material prices, and manage your build.' },
+  artisan: { title: 'Artisan', tip: 'Complete your profile and get verified to start receiving job enquiries.' },
   supplier: { title: 'Supplier', tip: 'List your products, manage orders, and connect with buyers across Nigeria.' },
-  professional: { title: 'Professional', tip: 'Showcase your credentials, answer questions, and connect with clients who need your expertise.' },
+  professional: { title: 'Professional', tip: 'Showcase your credentials and connect with clients who need your expertise.' },
   service_provider: { title: 'Service Provider', tip: 'Get verified and connect with project owners who need your services.' },
-  equipment_provider: { title: 'Equipment Provider', tip: 'List your equipment and connect with construction projects that need it.' },
-  field_marketer: { title: 'Field Marketer', tip: 'Share your referral link and track everyone who joins through it.' },
+  equipment_provider: { title: 'Equipment Provider', tip: 'List your equipment and connect with construction projects.' },
+  field_marketer: { title: 'Field Marketer', tip: 'Track your referrals and earnings from the EnGedi Africa programme.' },
 }
 
 export default function DashboardPage() {
@@ -98,20 +106,11 @@ export default function DashboardPage() {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) { router.push('/login'); return }
       const userId = sessionData.session.user.id
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single()
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single()
       if (error) { console.log('Profile error:', error); setLoading(false); return }
       setProfile(data)
-      const { data: notifData } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('is_read', false)
-        .order('created_at', { ascending: false })
-        .limit(5)
+      if (data.role === 'field_marketer') { router.push('/field-marketer'); return }
+      const { data: notifData } = await supabase.from('notifications').select('*').eq('user_id', userId).eq('is_read', false).order('created_at', { ascending: false }).limit(5)
       setNotifications(notifData || [])
       setLoading(false)
     }
@@ -134,106 +133,92 @@ export default function DashboardPage() {
     setNotifications([])
   }
 
-  const { locked } = useAccessGate(profile)
-
   if (loading) return (
-    <div className="flex min-h-screen items-center justify-center bg-surface">
-      <p className="text-text-muted">Loading...</p>
+    <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <p style={{ color: C.muted }}>Loading...</p>
     </div>
   )
 
-  const allMenuItems = roleMenus[profile?.role] || roleMenus.project_owner
-  const menuItems = allMenuItems.filter(item => {
-    if (locked === 'profile') return item.href === '/dashboard/profile'
-    if (locked === 'training') return item.href === '/dashboard/profile' || item.href === '/training'
-    return true
-  })
+  const menuItems = roleMenus[profile?.role] || roleMenus.project_owner
   const roleInfo = roleWelcome[profile?.role] || roleWelcome.project_owner
   const isVerified = profile?.verification_status === 'approved'
   const isProfileComplete = profile?.profile_completed === true
-
   const needsBankDetails = ['artisan', 'supplier', 'professional', 'service_provider', 'equipment_provider'].includes(profile?.role) && !profile?.bank_account_name
 
   return (
-    <div className="min-h-screen bg-surface">
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text }}>
 
-      <AppNav
-        right={
-          <div className="flex items-center gap-4">
-            {notifications.length > 0 && (
-              <div className="relative">
-                <Link href="/messages" className="text-ink-text no-underline" aria-label="Notifications">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                    <path d="M6 8a6 6 0 0 1 12 0c0 4 1.5 5.5 2 6H4c.5-.5 2-2 2-6Z" />
-                    <path d="M10 19a2 2 0 0 0 4 0" />
-                  </svg>
-                </Link>
-                <div className="absolute -right-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center bg-danger px-[3px] font-mono text-[10px] font-bold text-clay-contrast">
-                  {notifications.length}
-                </div>
+      {/* Topbar */}
+      <div style={{ background: C.sunk, borderBottom: `1px solid ${C.line}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Link href="/" style={{ color: C.clay, textDecoration: 'none', fontWeight: '800', fontSize: '18px', letterSpacing: '-0.5px' }}>EnGedi Africa</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          {notifications.length > 0 && (
+            <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => router.push('/messages')}>
+              <span style={{ fontSize: '18px' }}>🔔</span>
+              <div style={{ position: 'absolute', top: '-6px', right: '-6px', background: C.danger, color: '#fff', borderRadius: '50%', width: '16px', height: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '9px', fontWeight: '800' }}>
+                {notifications.length}
               </div>
-            )}
-            <button
-              onClick={handleLogout}
-              className="cursor-pointer border border-line-strong bg-transparent px-4 py-2 font-mono text-[13px] text-ink-muted transition-colors hover:text-ink-text"
-            >
-              Log out
-            </button>
-          </div>
-        }
-      />
+            </div>
+          )}
+          <button onClick={handleLogout} style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.line}`, padding: '7px 14px', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '600' }}>
+            Log out
+          </button>
+        </div>
+      </div>
 
-      <div className="mx-auto max-w-[900px] px-6 py-10">
+      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
 
         {/* Welcome card */}
-        <div className={`ticks mb-6 border ${isVerified ? 'border-oasis' : 'border-line'} bg-surface-raised p-8`}>
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="relative shrink-0">
-              <div className={`flex h-[68px] w-[68px] items-center justify-center overflow-hidden border-2 ${isVerified ? 'border-oasis' : 'border-clay'} bg-surface-sunk font-display text-[26px] font-bold text-clay`}>
+        <div style={{ background: C.raised, border: `1px solid ${isVerified ? C.oasis + '44' : C.line}`, borderRadius: '12px', padding: '28px', marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: C.sunk, border: `2px solid ${isVerified ? C.oasis : C.clay}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', color: C.clay, overflow: 'hidden' }}>
                 {profile?.avatar_url
-                  ? <img src={profile.avatar_url} alt="avatar" className="h-full w-full object-cover" />
+                  ? <img src={profile.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : profile?.full_name?.charAt(0)?.toUpperCase() || '?'
                 }
               </div>
               {isVerified && (
-                <div className="absolute -bottom-1 -right-1 flex h-[22px] w-[22px] items-center justify-center border-2 border-surface-raised bg-oasis">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--oasis-soft)" strokeWidth="3">
-                    <path d="M4 12l6 6L20 6" />
-                  </svg>
+                <div style={{ position: 'absolute', bottom: 0, right: 0, width: '20px', height: '20px', borderRadius: '50%', background: C.oasis, border: `2px solid ${C.raised}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ color: C.sunk, fontSize: '10px', fontWeight: '800' }}>✓</span>
                 </div>
               )}
             </div>
-            <div className="flex-1">
-              <div className="mb-2 flex flex-wrap items-center gap-2.5">
-                <h1 className="m-0 font-display text-[22px] font-bold text-text">
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', marginBottom: '6px' }}>
+                <h1 style={{ fontSize: '20px', fontWeight: '800', color: C.text, margin: 0 }}>
                   Welcome, {profile?.full_name?.split(' ')[0] || 'there'}
                 </h1>
-                {isVerified && <Badge tone="success">EnGedi Verified</Badge>}
+                {isVerified && (
+                  <span style={{ background: '#1a2e1d', border: `1px solid ${C.oasis}44`, color: C.oasis, fontSize: '11px', fontWeight: '700', padding: '3px 10px', borderRadius: '4px', letterSpacing: '0.3px' }}>
+                    VERIFIED
+                  </span>
+                )}
               </div>
-              <Badge tone="pending">{roleInfo.title}</Badge>
-              <p className="mb-0 mt-2.5 text-[13px] leading-relaxed text-text-muted">{roleInfo.tip}</p>
+              <span style={{ background: C.sunk, border: `1px solid ${C.clay}44`, color: C.clay, fontSize: '12px', fontWeight: '600', padding: '3px 10px', borderRadius: '4px' }}>
+                {roleInfo.title}
+              </span>
+              <p style={{ color: C.muted, fontSize: '13px', margin: '10px 0 0', lineHeight: '1.6' }}>{roleInfo.tip}</p>
             </div>
           </div>
         </div>
 
         {/* Notifications */}
         {notifications.length > 0 && (
-          <div className="ticks mb-4 border border-line bg-surface-raised p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="m-0 font-display text-[15px] font-bold text-text">Notifications</p>
-              <button onClick={markAllRead} className="cursor-pointer border-none bg-transparent p-0 font-mono text-[13px] font-semibold text-clay">Mark all read</button>
+          <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '20px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <p style={{ fontWeight: '700', color: C.text, margin: 0, fontSize: '14px' }}>Notifications</p>
+              <button onClick={markAllRead} style={{ background: 'none', border: 'none', color: C.clay, fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Mark all read</button>
             </div>
             {notifications.map(n => (
-              <div key={n.id} className="flex items-center justify-between gap-3 border-t border-line py-2.5">
-                <div className="flex-1">
-                  <p className="m-0 mb-0.5 text-[14px] font-semibold text-text">{n.title}</p>
-                  {n.body && <p className="m-0 text-[12px] text-text-muted">{n.body}</p>}
+              <div key={n.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderTop: `1px solid ${C.line}`, gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '600', color: C.text }}>{n.title}</p>
+                  {n.body && <p style={{ margin: 0, fontSize: '12px', color: C.muted }}>{n.body}</p>}
                 </div>
-                <div className="flex shrink-0 gap-2">
-                  {n.link && (
-                    <Link href={n.link} onClick={() => markRead(n.id)} className="bg-text px-3 py-1.5 font-mono text-[12px] font-semibold text-surface no-underline">View</Link>
-                  )}
-                  <button onClick={() => markRead(n.id)} className="cursor-pointer border border-line bg-transparent px-2.5 py-1.5 text-[12px] text-text-muted">✕</button>
+                <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                  {n.link && <Link href={n.link} onClick={() => markRead(n.id)} style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>View</Link>}
+                  <button onClick={() => markRead(n.id)} style={{ background: 'none', border: `1px solid ${C.line}`, color: C.muted, padding: '5px 8px', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>✕</button>
                 </div>
               </div>
             ))}
@@ -242,78 +227,83 @@ export default function DashboardPage() {
 
         {/* Profile completion */}
         {!isProfileComplete && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-clay bg-surface-raised p-5">
+          <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <p className="m-0 mb-1 text-[15px] font-bold text-text">Complete your profile</p>
-              <p className="m-0 text-[13px] text-text-muted">Add your details so customers can find and trust you</p>
+              <p style={{ fontWeight: '700', color: C.text, margin: '0 0 4px', fontSize: '14px' }}>Complete your profile</p>
+              <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Add your details so customers can find and trust you</p>
             </div>
-            <Button href="/dashboard/profile" variant="solid">Complete Now</Button>
+            <Link href="/dashboard/profile" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '9px 18px', borderRadius: '6px', fontWeight: '700', fontSize: '13px' }}>Complete Now</Link>
           </div>
         )}
 
         {/* Verification prompt */}
         {isProfileComplete && !profile?.documents_submitted && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line bg-surface-raised p-5">
+          <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <p className="m-0 mb-1 text-[15px] font-bold text-text">Get verified</p>
-              <p className="m-0 text-[13px] text-text-muted">Upload your documents to earn the EnGedi Verified badge</p>
+              <p style={{ fontWeight: '700', color: C.text, margin: '0 0 4px', fontSize: '14px' }}>Get verified</p>
+              <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Upload your documents to earn the EnGedi Verified badge</p>
             </div>
-            <Button href="/dashboard/verification" variant="solid">Upload Docs</Button>
+            <Link href="/dashboard/verification" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '9px 18px', borderRadius: '6px', fontWeight: '700', fontSize: '13px' }}>Upload Docs</Link>
           </div>
         )}
 
         {profile?.documents_submitted && !isVerified && profile?.verification_status !== 'rejected' && (
-          <div className="mb-4 border border-clay bg-surface-raised px-5 py-4">
-            <p className="m-0 font-mono text-[13px] font-bold text-clay">Documents submitted — Your verification is under review</p>
+          <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '14px 20px', marginBottom: '12px' }}>
+            <p style={{ margin: 0, fontWeight: '600', color: C.clay, fontSize: '13px' }}>⏳ Documents submitted — under review</p>
           </div>
         )}
 
         {profile?.verification_status === 'rejected' && (
-          <div className="mb-4 border border-danger bg-danger-soft px-5 py-4">
-            <p className="m-0 mb-1 font-mono text-[13px] font-bold text-danger">Verification rejected</p>
-            {profile?.admin_notes && <p className="m-0 text-[13px] text-text-muted">{profile.admin_notes}</p>}
+          <div style={{ background: C.dangerSoft, border: `1px solid ${C.danger}44`, borderRadius: '12px', padding: '14px 20px', marginBottom: '12px' }}>
+            <p style={{ margin: '0 0 4px', fontWeight: '700', color: C.danger, fontSize: '14px' }}>Verification rejected</p>
+            {profile?.admin_notes && <p style={{ margin: 0, fontSize: '13px', color: C.muted }}>{profile.admin_notes}</p>}
           </div>
         )}
 
-        {/* Bank details prompt for providers */}
+        {/* Bank details prompt */}
         {needsBankDetails && isProfileComplete && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-clay bg-surface-raised p-5">
+          <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <p className="m-0 mb-1 text-[15px] font-bold text-text">Add your bank details</p>
-              <p className="m-0 text-[13px] text-text-muted">Required to receive payments when clients confirm orders</p>
+              <p style={{ fontWeight: '700', color: C.text, margin: '0 0 4px', fontSize: '14px' }}>Add your bank details</p>
+              <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Required to receive payments when clients confirm orders</p>
             </div>
-            <Button href="/dashboard/bank-details" variant="solid">Add Now</Button>
+            <Link href="/dashboard/bank-details" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '9px 18px', borderRadius: '6px', fontWeight: '700', fontSize: '13px' }}>Add Now</Link>
           </div>
         )}
 
         {/* Artisan training prompt */}
-        {profile?.role === 'artisan' && locked === 'training' && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-ink p-5">
+        {profile?.role === 'artisan' && (
+          <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <p className="m-0 mb-1 text-[15px] font-bold text-ink-text">Complete your training</p>
-              <p className="m-0 text-[13px] text-ink-muted">Finish all 5 modules to earn your EnGedi Certified Professional badge</p>
+              <p style={{ fontWeight: '700', color: C.text, margin: '0 0 4px', fontSize: '14px' }}>Complete your training</p>
+              <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Finish all 5 modules to earn your EnGedi Certified Professional badge</p>
             </div>
-            <Button href="/training" variant="solid">Start Training</Button>
+            <Link href="/training" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '9px 18px', borderRadius: '6px', fontWeight: '700', fontSize: '13px' }}>Start Training</Link>
           </div>
         )}
 
         {/* Supplier listings prompt */}
         {profile?.role === 'supplier' && (
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-ink p-5">
+          <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '18px 20px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              <p className="m-0 mb-1 text-[15px] font-bold text-ink-text">List your products</p>
-              <p className="m-0 text-[13px] text-ink-muted">Add your materials so buyers across Nigeria can find and order from you</p>
+              <p style={{ fontWeight: '700', color: C.text, margin: '0 0 4px', fontSize: '14px' }}>List your products</p>
+              <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Add your materials so buyers can find and order from you</p>
             </div>
-            <Button href="/marketplace" variant="solid">Manage Listings</Button>
+            <Link href="/marketplace" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '9px 18px', borderRadius: '6px', fontWeight: '700', fontSize: '13px' }}>Manage Listings</Link>
           </div>
         )}
 
-        {/* Menu */}
-        <div className="ticks grid grid-cols-1 border-l border-t border-line sm:grid-cols-2">
+        {/* Menu grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginTop: '8px' }}>
           {menuItems.map(item => (
-            <Link key={item.title} href={item.href} className="border-b border-r border-line p-6 no-underline transition-colors hover:bg-surface-raised">
-              <h3 className="m-0 mb-1.5 font-display text-[15px] font-bold text-text">{item.title}</h3>
-              <p className="m-0 text-[13px] leading-relaxed text-text-muted">{item.desc}</p>
+            <Link key={item.title} href={item.href} style={{ textDecoration: 'none' }}>
+              <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '20px', cursor: 'pointer', height: '100%', boxSizing: 'border-box', transition: 'border-color 0.2s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor = C.clay}
+                onMouseLeave={e => e.currentTarget.style.borderColor = C.line}
+              >
+                <h3 style={{ fontSize: '14px', fontWeight: '700', color: C.text, margin: '0 0 6px' }}>{item.title}</h3>
+                <p style={{ fontSize: '12px', color: C.muted, margin: 0, lineHeight: '1.5' }}>{item.desc}</p>
+              </div>
             </Link>
           ))}
         </div>
