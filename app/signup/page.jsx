@@ -1,11 +1,19 @@
 'use client'
-import { Suspense, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import AuthShell from '@/components/AuthShell'
-import Input from '@/components/Input'
-import Button from '@/components/Button'
+
+const C = {
+  surface: '#15120e',
+  raised: '#201a14',
+  sunk: '#0f0c09',
+  text: '#f1eae0',
+  muted: '#a79a85',
+  line: '#362d22',
+  clay: '#e08554',
+  oasis: '#86a98b',
+  danger: '#e2695f',
+}
 
 const roles = [
   { value: 'project_owner', label: 'Project Owner', desc: 'I want to hire and buy materials' },
@@ -16,19 +24,24 @@ const roles = [
   { value: 'equipment_provider', label: 'Equipment Provider', desc: 'I rent out equipment' },
 ]
 
-function SignupForm() {
+export default function SignupPage() {
   const supabase = createClient()
-  const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: '', ref: searchParams.get('ref') || '' })
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', role: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [done, setDone] = useState(false)
 
   const handleSignup = async () => {
     setError('')
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
+
+    // Check for referral code in URL
+    const urlParams = new URLSearchParams(window.location.search)
+    const ref = urlParams.get('ref')
+
+    const { data, error } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
       options: {
@@ -37,115 +50,137 @@ function SignupForm() {
       }
     })
     if (error) { setError(error.message); setLoading(false); return }
-    await supabase.from('profiles').update({ full_name: form.full_name, role: form.role }).eq('email', form.email)
-    if (form.ref) {
-      const { data: marketer } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('referral_code', form.ref)
-        .eq('role', 'field_marketer')
-        .single()
-      if (marketer) {
-        await supabase.from('profiles').update({ referred_by_marketer_id: marketer.id }).eq('email', form.email)
+
+    // Update profile with role and referral
+    if (data.user) {
+      await supabase.from('profiles').update({
+        full_name: form.full_name,
+        role: form.role,
+        referred_by: ref || null,
+      }).eq('id', data.user.id)
+
+      // If referred by a field marketer, log the signup
+      if (ref) {
+        const { data: marketer } = await supabase.from('profiles').select('id, full_name').eq('referral_code', ref).eq('role', 'field_marketer').single()
+        if (marketer) {
+          await supabase.from('field_marketer_signups').insert({
+            field_marketer_id: marketer.id,
+            referred_user_id: data.user.id,
+            referred_user_name: form.full_name,
+            referred_user_role: form.role,
+            commission_earned: 5000,
+          })
+        }
       }
     }
+
     setLoading(false)
     setDone(true)
   }
 
+  const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
+
   if (done) return (
-    <AuthShell>
-      <div className="text-center">
-        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center border border-oasis text-oasis">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 6L12 13L21 6" /><rect x="3" y="5" width="18" height="14" /></svg>
-        </div>
-        <h1 className="mb-3 text-[1.35rem] font-bold">Check your email</h1>
-        <p className="mb-6 text-[0.95rem] leading-relaxed text-text-muted">
-          We sent a confirmation link to <strong className="text-text">{form.email}</strong>. Click the link in that email to activate your EnGedi Africa account.
-        </p>
-        <p className="text-[0.85rem] text-text-muted">
-          Already confirmed? <Link href="/login" className="font-semibold text-clay no-underline">Log in</Link>
-        </p>
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: C.sunk, borderBottom: `1px solid ${C.line}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center' }}>
+        <Link href="/" style={{ color: C.clay, textDecoration: 'none', fontWeight: '800', fontSize: '18px' }}>EnGedi Africa</Link>
       </div>
-    </AuthShell>
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '40px', width: '100%', maxWidth: '480px', textAlign: 'center' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>📬</div>
+          <h1 style={{ fontSize: '20px', fontWeight: '800', color: C.text, margin: '0 0 12px' }}>Check your email</h1>
+          <p style={{ color: C.muted, fontSize: '14px', lineHeight: '1.7', margin: '0 0 8px' }}>
+            We sent a confirmation link to
+          </p>
+          <p style={{ color: C.clay, fontSize: '14px', fontWeight: '700', margin: '0 0 20px' }}>{form.email}</p>
+          <p style={{ color: C.muted, fontSize: '13px', margin: '0 0 24px', lineHeight: '1.6' }}>
+            Click the link in that email to activate your account. Check your spam folder if you don't see it.
+          </p>
+          <Link href="/login" style={{ display: 'inline-block', background: C.clay, color: C.sunk, textDecoration: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px' }}>
+            Go to Login
+          </Link>
+        </div>
+      </div>
+    </div>
   )
 
   return (
-    <AuthShell>
-      <h1 className="mb-2 text-[1.5rem] font-bold">Create your account</h1>
-      <p className="mb-8 text-[0.9rem] text-text-muted">Join Nigeria&apos;s construction marketplace</p>
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: C.sunk, borderBottom: `1px solid ${C.line}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center' }}>
+        <Link href="/" style={{ color: C.clay, textDecoration: 'none', fontWeight: '800', fontSize: '18px' }}>EnGedi Africa</Link>
+      </div>
 
-      {step === 1 && (
-        <div>
-          <div className="mb-4">
-            <Input label="Full Name" placeholder="Your full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} />
-          </div>
-          <div className="mb-4">
-            <Input label="Email" type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-          </div>
-          <div className="mb-6">
-            <Input label="Password" type="password" placeholder="Min. 6 characters" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
-          </div>
-          {error && <p className="mb-3 text-[0.85rem] text-danger">{error}</p>}
-          <Button
-            className="w-full justify-center"
-            onClick={() => {
-              if (!form.full_name || !form.email || !form.password) { setError('Please fill all fields'); return }
-              if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
-              setError('')
-              setStep(2)
-            }}
-          >
-            Continue
-          </Button>
-          <p className="mt-5 text-center text-[0.85rem] text-text-muted">
-            Already have an account? <Link href="/login" className="font-semibold text-clay no-underline">Log in</Link>
-          </p>
-        </div>
-      )}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 24px' }}>
+        <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '40px', width: '100%', maxWidth: '480px' }}>
+          <h1 style={{ fontSize: '22px', fontWeight: '800', color: C.text, margin: '0 0 8px' }}>Create your account</h1>
+          <p style={{ color: C.muted, fontSize: '14px', margin: '0 0 28px' }}>Join Nigeria&apos;s construction marketplace</p>
 
-      {step === 2 && (
-        <div>
-          <p className="mb-4 text-[0.85rem] font-semibold">What best describes you?</p>
-          <div className="mb-6 ticks border-l border-t border-line">
-            {roles.map(role => (
-              <div
-                key={role.value}
-                onClick={() => setForm({ ...form, role: role.value })}
-                className={`cursor-pointer border-b border-r border-line px-4 py-3.5 transition-colors ${form.role === role.value ? 'bg-oasis-soft' : 'hover:bg-surface-sunk'}`}
-              >
-                <div className="flex items-center justify-between text-[0.9rem] font-bold">
-                  {role.label}
-                  {form.role === role.value && <span className="text-oasis">✓</span>}
-                </div>
-                <div className="text-[0.78rem] text-text-muted">{role.desc}</div>
-              </div>
+          {/* Progress */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '28px' }}>
+            {[1, 2].map(s => (
+              <div key={s} style={{ flex: 1, height: '3px', borderRadius: '2px', background: step >= s ? C.clay : C.line }} />
             ))}
           </div>
-          {error && <p className="mb-3 text-[0.85rem] text-danger">{error}</p>}
-          <div className="flex gap-2.5">
-            <Button variant="outline" className="flex-1 justify-center" onClick={() => setStep(1)}>Back</Button>
-            <Button
-              className="flex-[2] justify-center"
-              disabled={loading}
-              onClick={() => {
-                if (!form.role) { setError('Please select a role'); return }
-                handleSignup()
-              }}
-            >
-              {loading ? 'Creating account...' : 'Create Account'}
-            </Button>
-          </div>
-        </div>
-      )}
-    </AuthShell>
-  )
-}
 
-export default function SignupPage() {
-  return (
-    <Suspense fallback={null}>
-      <SignupForm />
-    </Suspense>
+          {step === 1 && (
+            <div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Full Name</label>
+                <input type="text" placeholder="Your full name" value={form.full_name} onChange={e => setForm({ ...form, full_name: e.target.value })} style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</label>
+                <input type="email" placeholder="your@email.com" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} style={inputStyle} />
+              </div>
+              <div style={{ marginBottom: '24px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Password</label>
+                <div style={{ position: 'relative' }}>
+                  <input type={showPassword ? 'text' : 'password'} placeholder="Min. 6 characters" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })}
+                    style={{ ...inputStyle, paddingRight: '56px' }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: C.clay, fontSize: '13px', fontWeight: '700' }}>
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+              </div>
+              {error && <p style={{ color: C.danger, fontSize: '13px', marginBottom: '12px', fontWeight: '600' }}>{error}</p>}
+              <button onClick={() => {
+                if (!form.full_name || !form.email || !form.password) { setError('Please fill all fields'); return }
+                if (form.password.length < 6) { setError('Password must be at least 6 characters'); return }
+                setError(''); setStep(2)
+              }} style={{ width: '100%', background: C.clay, color: C.sunk, border: 'none', padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer', marginBottom: '16px' }}>
+                Continue
+              </button>
+              <p style={{ textAlign: 'center', fontSize: '13px', color: C.muted, margin: 0 }}>
+                Already have an account? <Link href="/login" style={{ color: C.clay, fontWeight: '600', textDecoration: 'none' }}>Log in</Link>
+              </p>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <p style={{ fontSize: '13px', fontWeight: '700', color: C.text, marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>What best describes you?</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '24px' }}>
+                {roles.map(role => (
+                  <div key={role.value} onClick={() => setForm({ ...form, role: role.value })}
+                    style={{ padding: '14px 16px', border: `1px solid ${form.role === role.value ? C.clay : C.line}`, borderRadius: '8px', cursor: 'pointer', background: form.role === role.value ? '#201a14' : 'transparent' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: form.role === role.value ? C.clay : C.text }}>{role.label}</div>
+                    <div style={{ fontSize: '12px', color: C.muted, marginTop: '2px' }}>{role.desc}</div>
+                  </div>
+                ))}
+              </div>
+              {error && <p style={{ color: C.danger, fontSize: '13px', marginBottom: '12px', fontWeight: '600' }}>{error}</p>}
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={() => setStep(1)} style={{ flex: 1, background: 'transparent', color: C.muted, border: `1px solid ${C.line}`, padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>Back</button>
+                <button onClick={() => { if (!form.role) { setError('Please select a role'); return } handleSignup() }} disabled={loading}
+                  style={{ flex: 2, background: loading ? C.line : C.clay, color: loading ? C.muted : C.sunk, border: 'none', padding: '14px', borderRadius: '8px', fontSize: '15px', fontWeight: '700', cursor: loading ? 'not-allowed' : 'pointer' }}>
+                  {loading ? 'Creating account...' : 'Create Account'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
