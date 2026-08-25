@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
@@ -104,13 +104,15 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
   )
 }
 
-export default function ServiceProviderProfilePage({ params }) {
+export default function ServiceProviderProfilePage() {
   const supabase = createClient()
   const router = useRouter()
+  const params = useParams() // ✅ fixed
   const [profile, setProfile] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [messaging, setMessaging] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -123,13 +125,17 @@ export default function ServiceProviderProfilePage({ params }) {
   const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
 
   useEffect(() => {
+    if (!params?.id) return
     const getData = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) { router.push('/login'); return }
-      const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
+      const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).maybeSingle()
       setCurrentUser(me)
-      const { data } = await supabase.from('profiles').select('*').eq('id', params.id).single()
-      if (!data) { router.push('/browse'); return }
+
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', params.id).maybeSingle()
+      if (error) { setLoadError(error.message); setLoading(false); return }
+      if (!data) { setLoadError('not_found'); setLoading(false); return }
+
       setProfile(data)
       const { data: reviewData } = await supabase.from('reviews')
         .select('*, reviewer:profiles!reviews_reviewer_id_fkey(full_name, avatar_url, role)')
@@ -138,7 +144,7 @@ export default function ServiceProviderProfilePage({ params }) {
       setLoading(false)
     }
     getData()
-  }, [])
+  }, [params?.id])
 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
   const alreadyReviewed = reviews.some(r => r.reviewer_id === currentUser?.id)
@@ -146,7 +152,7 @@ export default function ServiceProviderProfilePage({ params }) {
   const handleStartConversation = async () => {
     setMessaging(true)
     const { data: existing } = await supabase.from('conversations').select('id')
-      .or(`and(participant_one.eq.${currentUser.id},participant_two.eq.${profile.id}),and(participant_one.eq.${profile.id},participant_two.eq.${currentUser.id})`).single()
+      .or(`and(participant_one.eq.${currentUser.id},participant_two.eq.${profile.id}),and(participant_one.eq.${profile.id},participant_two.eq.${currentUser.id})`).maybeSingle()
     if (existing) { router.push('/messages'); return }
     await supabase.from('conversations').insert({ participant_one: currentUser.id, participant_two: profile.id })
     setMessaging(false); setMessageSent(true)
@@ -156,7 +162,7 @@ export default function ServiceProviderProfilePage({ params }) {
   const handleSubmitReview = async () => {
     if (rating === 0) { setReviewMessage('Please select a rating'); return }
     setSubmittingReview(true)
-    const { data: existing } = await supabase.from('reviews').select('id').eq('reviewer_id', currentUser.id).eq('reviewed_id', profile.id).single()
+    const { data: existing } = await supabase.from('reviews').select('id').eq('reviewer_id', currentUser.id).eq('reviewed_id', profile.id).maybeSingle()
     if (existing) { setReviewMessage('Already reviewed'); setSubmittingReview(false); return }
     const { data, error } = await supabase.from('reviews').insert({
       reviewer_id: currentUser.id, reviewed_id: profile.id, rating, body: reviewBody,
@@ -175,6 +181,26 @@ export default function ServiceProviderProfilePage({ params }) {
   )
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
+
+  if (loadError === 'not_found') {
+    return (
+      <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <p style={{ color: C.text, fontSize: '16px' }}>This service provider profile couldn't be found.</p>
+        <Link href="/browse" style={{ color: C.clay, fontSize: '13px' }}>← Back to Browse</Link>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+        <div style={{ background: C.dangerSoft, color: C.danger, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: 20, maxWidth: 500 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Couldn't load this profile</div>
+          <div style={{ fontSize: 13, fontFamily: 'monospace' }}>{loadError}</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.surface, color: C.text }}>

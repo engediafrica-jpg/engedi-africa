@@ -1,20 +1,13 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 
 const C = {
-  surface: '#15120e',
-  raised: '#201a14',
-  sunk: '#0f0c09',
-  text: '#f1eae0',
-  muted: '#a79a85',
-  line: '#362d22',
-  clay: '#e08554',
-  oasis: '#86a98b',
-  danger: '#e2695f',
-  dangerSoft: '#2e1712',
+  surface: '#15120e', raised: '#201a14', sunk: '#0f0c09',
+  text: '#f1eae0', muted: '#a79a85', line: '#362d22',
+  clay: '#e08554', oasis: '#86a98b', danger: '#e2695f', dangerSoft: '#2e1712',
 }
 
 function RequestQuoteButton({ profile, currentUser, supabase, router }) {
@@ -42,7 +35,6 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
       payment_status: 'unpaid',
     })
     if (insertError) {
-      console.log('Booking error:', insertError)
       setError('Error: ' + insertError.message)
       setSubmitting(false)
       return
@@ -128,13 +120,15 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
   )
 }
 
-export default function ArtisanProfilePage({ params }) {
+export default function ArtisanProfilePage() {
   const supabase = createClient()
   const router = useRouter()
+  const params = useParams() // ✅ fixed: hook resolves synchronously, unlike the params prop
   const [profile, setProfile] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [messaging, setMessaging] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -147,13 +141,28 @@ export default function ArtisanProfilePage({ params }) {
   const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
 
   useEffect(() => {
+    if (!params?.id) return
     const getData = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) { router.push('/login'); return }
-      const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
+
+      const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).maybeSingle()
       setCurrentUser(me)
-      const { data } = await supabase.from('profiles').select('*').eq('id', params.id).single()
-      if (!data) { router.push('/browse'); return }
+
+      // ✅ maybeSingle() instead of single() — returns null instead of throwing on 0 rows
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', params.id).maybeSingle()
+
+      if (error) {
+        setLoadError(error.message)
+        setLoading(false)
+        return
+      }
+      if (!data) {
+        setLoadError('not_found')
+        setLoading(false)
+        return
+      }
+
       setProfile(data)
       const { data: reviewData } = await supabase
         .from('reviews')
@@ -164,7 +173,7 @@ export default function ArtisanProfilePage({ params }) {
       setLoading(false)
     }
     getData()
-  }, [])
+  }, [params?.id])
 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
 
@@ -173,7 +182,7 @@ export default function ArtisanProfilePage({ params }) {
     const { data: existing } = await supabase.from('conversations')
       .select('id')
       .or(`and(participant_one.eq.${currentUser.id},participant_two.eq.${profile.id}),and(participant_one.eq.${profile.id},participant_two.eq.${currentUser.id})`)
-      .single()
+      .maybeSingle()
     if (existing) { router.push('/messages'); return }
     await supabase.from('conversations').insert({ participant_one: currentUser.id, participant_two: profile.id })
     setMessaging(false)
@@ -184,7 +193,7 @@ export default function ArtisanProfilePage({ params }) {
   const handleSubmitReview = async () => {
     if (rating === 0) { setReviewMessage('Please select a star rating'); return }
     setSubmittingReview(true)
-    const { data: existing } = await supabase.from('reviews').select('id').eq('reviewer_id', currentUser.id).eq('reviewed_id', profile.id).single()
+    const { data: existing } = await supabase.from('reviews').select('id').eq('reviewer_id', currentUser.id).eq('reviewed_id', profile.id).maybeSingle()
     if (existing) { setReviewMessage('You have already reviewed this person'); setSubmittingReview(false); return }
     const { data, error } = await supabase.from('reviews').insert({
       reviewer_id: currentUser.id, reviewed_id: profile.id, rating, body: reviewBody,
@@ -213,6 +222,26 @@ export default function ArtisanProfilePage({ params }) {
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
 
+  if (loadError === 'not_found') {
+    return (
+      <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+        <p style={{ color: C.text, fontSize: '16px' }}>This artisan profile couldn't be found.</p>
+        <Link href="/browse" style={{ color: C.clay, fontSize: '13px' }}>← Back to Browse</Link>
+      </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40 }}>
+        <div style={{ background: C.dangerSoft, color: C.danger, border: `1px solid ${C.danger}44`, borderRadius: 8, padding: 20, maxWidth: 500 }}>
+          <div style={{ fontWeight: 600, marginBottom: 8 }}>Couldn't load this profile</div>
+          <div style={{ fontSize: 13, fontFamily: 'monospace' }}>{loadError}</div>
+        </div>
+      </div>
+    )
+  }
+
   const alreadyReviewed = reviews.some(r => r.reviewer_id === currentUser?.id)
 
   return (
@@ -224,7 +253,6 @@ export default function ArtisanProfilePage({ params }) {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '40px 24px' }}>
 
-        {/* Profile card */}
         <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '28px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ width: '76px', height: '76px', borderRadius: '50%', background: C.sunk, border: `2px solid ${C.clay}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.clay, fontSize: '26px', overflow: 'hidden', flexShrink: 0 }}>
@@ -249,7 +277,6 @@ export default function ArtisanProfilePage({ params }) {
           </div>
         </div>
 
-        {/* Bio */}
         {profile.bio && (
           <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
             <h3 style={{ fontSize: '13px', fontWeight: '700', color: C.muted, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>About</h3>
@@ -257,7 +284,6 @@ export default function ArtisanProfilePage({ params }) {
           </div>
         )}
 
-        {/* Details */}
         <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
           <h3 style={{ fontSize: '13px', fontWeight: '700', color: C.muted, margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Details</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -268,7 +294,6 @@ export default function ArtisanProfilePage({ params }) {
           </div>
         </div>
 
-        {/* Reviews */}
         <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
             <div>
@@ -322,7 +347,6 @@ export default function ArtisanProfilePage({ params }) {
           }
         </div>
 
-        {/* Actions */}
         {currentUser?.id !== profile.id && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <RequestQuoteButton profile={profile} currentUser={currentUser} supabase={supabase} router={router} />
