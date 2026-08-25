@@ -19,6 +19,16 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
 
   const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
 
+  const scheduledDateFromTimeframe = (tf) => {
+    const now = new Date()
+    if (tf === 'asap') return now.toISOString().split('T')[0]
+    if (tf === 'this_week') { now.setDate(now.getDate() + 7); return now.toISOString().split('T')[0] }
+    if (tf === 'next_week') { now.setDate(now.getDate() + 14); return now.toISOString().split('T')[0] }
+    if (tf === 'this_month') { now.setDate(now.getDate() + 30); return now.toISOString().split('T')[0] }
+    if (tf === 'next_month') { now.setDate(now.getDate() + 60); return now.toISOString().split('T')[0] }
+    return null // 'flexible' or empty — no specific date
+  }
+
   const handleSubmit = async () => {
     if (!form.title || !form.description) { setError('Please fill in job title and description'); return }
     setSubmitting(true)
@@ -30,7 +40,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
       description: form.description,
       location: form.location || null,
       budget: form.budget ? Number(form.budget) : null,
-      scheduled_date: form.scheduled_date || null,
+      scheduled_date: scheduledDateFromTimeframe(form.scheduled_date),
       status: 'pending',
       payment_status: 'unpaid',
     })
@@ -107,7 +117,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
 export default function ServiceProviderProfilePage() {
   const supabase = createClient()
   const router = useRouter()
-  const params = useParams() // ✅ fixed
+  const params = useParams()
   const [profile, setProfile] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])
