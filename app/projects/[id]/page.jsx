@@ -39,6 +39,7 @@ export default function ProjectDetailPage({ params }) {
   const [showAddStage, setShowAddStage] = useState(false)
   const [newStageTitle, setNewStageTitle] = useState('')
   const [message, setMessage] = useState('')
+  const [fetchError, setFetchError] = useState('')
   const [editingProject, setEditingProject] = useState(false)
   const [projectForm, setProjectForm] = useState({})
 
@@ -60,7 +61,12 @@ export default function ProjectDetailPage({ params }) {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       setProfile(profileData)
       const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', params.id).single()
-      if (error || !projectData) { router.push('/projects'); return }
+      if (error || !projectData) {
+        console.error('Project fetch failed:', error)
+        setFetchError(error ? `${error.code || 'no code'}: ${error.message || 'unknown error'}` : 'No project returned')
+        setLoading(false)
+        return
+      }
       setProject(projectData)
       setProjectForm(projectData)
       const { data: stagesData } = await supabase.from('project_stages').select('*').eq('project_id', params.id).order('order_index', { ascending: true })
@@ -115,7 +121,6 @@ export default function ProjectDetailPage({ params }) {
 
     setInviteLoading(true)
 
-    // 1. Look up the person by email
     const { data: foundProfile, error: lookupError } = await supabase
       .from('profiles')
       .select('id, full_name, role, avatar_url, is_verified, email')
@@ -140,7 +145,6 @@ export default function ProjectDetailPage({ params }) {
       return
     }
 
-    // 2. Add to project_members
     const { data: newMember, error: insertError } = await supabase
       .from('project_members')
       .insert({
@@ -157,7 +161,6 @@ export default function ProjectDetailPage({ params }) {
       return
     }
 
-    // 3. Notify them in-app
     await supabase.from('notifications').insert({
       user_id: foundProfile.id,
       type: 'project_invite',
@@ -189,6 +192,12 @@ export default function ProjectDetailPage({ params }) {
   }
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
+
+  if (fetchError) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px', textAlign: 'center' }}>
+    <p style={{ color: C.danger, fontWeight: '700' }}>Couldn't load this project</p>
+    <p style={{ color: C.muted, fontSize: '13px', maxWidth: '400px' }}>{fetchError}</p>
+    <Link href="/projects" style={{ color: C.clay }}>← Back to Projects</Link>
+  </div>
 
   const progress = getProgress()
   const isOwner = profile?.id === project?.owner_id
@@ -265,7 +274,6 @@ export default function ProjectDetailPage({ params }) {
                 )}
               </div>
 
-              {/* Progress bar */}
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                   <span style={{ fontSize: '11px', color: C.muted, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Overall Progress</span>
@@ -281,7 +289,6 @@ export default function ProjectDetailPage({ params }) {
 
         {message && <p style={{ color: C.oasis, fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
 
-        {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {[
             { key: 'stages', label: 'Stages' },
@@ -294,7 +301,6 @@ export default function ProjectDetailPage({ params }) {
           ))}
         </div>
 
-        {/* Stages */}
         {activeTab === 'stages' && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
@@ -353,7 +359,6 @@ export default function ProjectDetailPage({ params }) {
           </div>
         )}
 
-        {/* Team */}
         {activeTab === 'team' && (
           <div>
             {isOwner && (

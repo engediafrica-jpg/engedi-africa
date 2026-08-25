@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -105,6 +105,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
 }
 
 export default function ProfessionalProfilePage({ params }) {
+  const { id } = use(params)
   const supabase = createClient()
   const router = useRouter()
   const [profile, setProfile] = useState(null)
@@ -132,8 +133,8 @@ export default function ProfessionalProfilePage({ params }) {
       if (meError) console.error('Error loading current user profile:', meError)
       setCurrentUser(me)
 
-      console.log('Looking up professional with id:', params.id)
-      const { data, error } = await supabase.from('profiles').select('*').eq('id', params.id).single()
+      console.log('Looking up professional with id:', id)
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', id).single()
 
       if (error) {
         console.error('Error loading professional profile:', error)
@@ -142,7 +143,7 @@ export default function ProfessionalProfilePage({ params }) {
         return
       }
       if (!data) {
-        console.error('No profile row returned for id:', params.id)
+        console.error('No profile row returned for id:', id)
         setLoadError('No profile found for this id.')
         setLoading(false)
         return
@@ -151,13 +152,13 @@ export default function ProfessionalProfilePage({ params }) {
       setProfile(data)
       const { data: reviewData, error: reviewError } = await supabase.from('reviews')
         .select('*, reviewer:profiles!reviews_reviewer_id_fkey(full_name, avatar_url, role)')
-        .eq('reviewed_id', params.id).order('created_at', { ascending: false })
+        .eq('reviewed_id', id).order('created_at', { ascending: false })
       if (reviewError) console.error('Error loading reviews:', reviewError)
       setReviews(reviewData || [])
       setLoading(false)
     }
     getData()
-  }, [])
+  }, [id])
 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
   const alreadyReviewed = reviews.some(r => r.reviewer_id === currentUser?.id)
