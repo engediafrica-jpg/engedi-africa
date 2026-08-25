@@ -42,6 +42,14 @@ export default function ProjectDetailPage({ params }) {
   const [editingProject, setEditingProject] = useState(false)
   const [projectForm, setProjectForm] = useState({})
 
+  // Invite state
+  const [showInvite, setShowInvite] = useState(false)
+  const [inviteEmail, setInviteEmail] = useState('')
+  const [inviteRole, setInviteRole] = useState('')
+  const [inviteLoading, setInviteLoading] = useState(false)
+  const [inviteError, setInviteError] = useState('')
+  const [removingMember, setRemovingMember] = useState(null)
+
   const inputStyle = { width: '100%', padding: '11px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
   const darkInputStyle = { ...inputStyle, background: '#0a0807', border: `1px solid #4a3d2c` }
 
@@ -98,6 +106,81 @@ export default function ProjectDetailPage({ params }) {
       setMessage('Project updated!')
       setTimeout(() => setMessage(''), 3000)
     }
+  }
+
+  const handleInvite = async () => {
+    setInviteError('')
+    const email = inviteEmail.trim().toLowerCase()
+    if (!email) { setInviteError('Enter an email address'); return }
+
+    setInviteLoading(true)
+
+    // 1. Look up the person by email
+    const { data: foundProfile, error: lookupError } = await supabase
+      .from('profiles')
+      .select('id, full_name, role, avatar_url, is_verified, email')
+      .eq('email', email)
+      .single()
+
+    if (lookupError || !foundProfile) {
+      setInviteError('No EnGedi account found with that email. Ask them to sign up first.')
+      setInviteLoading(false)
+      return
+    }
+
+    if (foundProfile.id === project.owner_id) {
+      setInviteError('That person already owns this project.')
+      setInviteLoading(false)
+      return
+    }
+
+    if (members.some(m => m.user_id === foundProfile.id)) {
+      setInviteError('That person is already on the team.')
+      setInviteLoading(false)
+      return
+    }
+
+    // 2. Add to project_members
+    const { data: newMember, error: insertError } = await supabase
+      .from('project_members')
+      .insert({
+        project_id: project.id,
+        user_id: foundProfile.id,
+        role: inviteRole || foundProfile.role,
+      })
+      .select('*, user:profiles(full_name, role, avatar_url, is_verified)')
+      .single()
+
+    if (insertError) {
+      setInviteError('Could not add member. Try again.')
+      setInviteLoading(false)
+      return
+    }
+
+    // 3. Notify them in-app
+    await supabase.from('notifications').insert({
+      user_id: foundProfile.id,
+      type: 'project_invite',
+      title: 'Added to a project',
+      body: `You've been added to "${project.title}"`,
+      link: `/projects/${project.id}`,
+      is_read: false,
+    })
+
+    setMembers([...members, newMember])
+    setInviteEmail('')
+    setInviteRole('')
+    setShowInvite(false)
+    setInviteLoading(false)
+    setMessage(`${foundProfile.full_name} added to the project`)
+    setTimeout(() => setMessage(''), 3000)
+  }
+
+  const handleRemoveMember = async (memberId) => {
+    setRemovingMember(memberId)
+    const { error } = await supabase.from('project_members').delete().eq('id', memberId)
+    if (!error) setMembers(members.filter(m => m.id !== memberId))
+    setRemovingMember(null)
   }
 
   const getProgress = () => {
@@ -272,32 +355,87 @@ export default function ProjectDetailPage({ params }) {
 
         {/* Team */}
         {activeTab === 'team' && (
-          members.length === 0 ? (
-            <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
-              <p style={{ color: C.muted, fontSize: '15px', margin: '0 0 8px', fontWeight: '600' }}>No team members yet</p>
-              <p style={{ color: C.muted, fontSize: '13px', margin: '0 0 20px' }}>When you hire artisans or professionals, they will appear here</p>
-              <Link href="/browse" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px' }}>
-                Browse Professionals
-              </Link>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {members.map(member => (
-                <div key={member.id} style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: C.sunk, border: `1px solid ${C.clay}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.clay, fontSize: '16px', overflow: 'hidden', flexShrink: 0 }}>
-                    {member.user?.avatar_url ? <img src={member.user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : member.user?.full_name?.charAt(0)?.toUpperCase()}
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                      <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: C.text }}>{member.user?.full_name}</p>
-                      {member.user?.is_verified && <span style={{ background: '#1a2e1d', color: C.oasis, fontSize: '11px', fontWeight: '600', padding: '2px 6px', borderRadius: '4px' }}>VERIFIED</span>}
+          <div>
+            {isOwner && (
+              <div style={{ marginBottom: '16px' }}>
+                {showInvite ? (
+                  <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Invite by Email
+                    </label>
+                    <p style={{ fontSize: '12px', color: C.muted, margin: '0 0 12px' }}>
+                      They must already have an EnGedi account.
+                    </p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <input
+                        type="email"
+                        placeholder="name@example.com"
+                        value={inviteEmail}
+                        onChange={e => setInviteEmail(e.target.value)}
+                        style={{ flex: '1 1 200px', padding: '10px 12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', color: C.text }}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Role on this project (optional)"
+                        value={inviteRole}
+                        onChange={e => setInviteRole(e.target.value)}
+                        style={{ flex: '1 1 160px', padding: '10px 12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', color: C.text }}
+                      />
+                      <button onClick={handleInvite} disabled={inviteLoading}
+                        style={{ background: C.clay, color: C.sunk, border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                        {inviteLoading ? 'Adding...' : 'Add'}
+                      </button>
+                      <button onClick={() => { setShowInvite(false); setInviteError('') }}
+                        style={{ background: 'transparent', color: C.muted, border: `1px solid ${C.line}`, padding: '10px 14px', borderRadius: '8px', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
+                        Cancel
+                      </button>
                     </div>
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', color: C.muted, textTransform: 'capitalize' }}>{member.role || member.user?.role?.replace('_', ' ')}</p>
+                    {inviteError && <p style={{ color: C.danger, fontSize: '12px', marginTop: '10px' }}>{inviteError}</p>}
                   </div>
-                </div>
-              ))}
-            </div>
-          )
+                ) : (
+                  <button onClick={() => setShowInvite(true)}
+                    style={{ background: 'transparent', color: C.clay, border: `1px dashed ${C.clay}44`, padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', width: '100%' }}>
+                    + Invite Team Member
+                  </button>
+                )}
+              </div>
+            )}
+
+            {members.length === 0 ? (
+              <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                <p style={{ color: C.muted, fontSize: '15px', margin: '0 0 8px', fontWeight: '600' }}>No team members yet</p>
+                <p style={{ color: C.muted, fontSize: '13px', margin: '0 0 20px' }}>Invite someone by email, or browse professionals to hire</p>
+                <Link href="/browse" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: '700', fontSize: '14px' }}>
+                  Browse Professionals
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {members.map(member => (
+                  <div key={member.id} style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                      <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: C.sunk, border: `1px solid ${C.clay}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.clay, fontSize: '16px', overflow: 'hidden', flexShrink: 0 }}>
+                        {member.user?.avatar_url ? <img src={member.user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : member.user?.full_name?.charAt(0)?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: C.text }}>{member.user?.full_name}</p>
+                          {member.user?.is_verified && <span style={{ background: '#1a2e1d', color: C.oasis, fontSize: '11px', fontWeight: '600', padding: '2px 6px', borderRadius: '4px' }}>VERIFIED</span>}
+                        </div>
+                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: C.muted, textTransform: 'capitalize' }}>{member.role || member.user?.role?.replace('_', ' ')}</p>
+                      </div>
+                    </div>
+                    {isOwner && (
+                      <button onClick={() => handleRemoveMember(member.id)} disabled={removingMember === member.id}
+                        style={{ background: C.dangerSoft, color: C.danger, border: `1px solid ${C.danger}44`, padding: '6px 12px', borderRadius: '6px', fontWeight: '600', fontSize: '12px', cursor: 'pointer' }}>
+                        {removingMember === member.id ? 'Removing...' : 'Remove'}
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
     </div>

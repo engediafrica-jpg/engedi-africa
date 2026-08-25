@@ -111,6 +111,7 @@ export default function ProfessionalProfilePage({ params }) {
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [messaging, setMessaging] = useState(false)
   const [messageSent, setMessageSent] = useState(false)
   const [showReviewForm, setShowReviewForm] = useState(false)
@@ -126,14 +127,32 @@ export default function ProfessionalProfilePage({ params }) {
     const getData = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
       if (!sessionData.session) { router.push('/login'); return }
-      const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
+
+      const { data: me, error: meError } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
+      if (meError) console.error('Error loading current user profile:', meError)
       setCurrentUser(me)
-      const { data } = await supabase.from('profiles').select('*').eq('id', params.id).single()
-      if (!data) { router.push('/browse'); return }
+
+      console.log('Looking up professional with id:', params.id)
+      const { data, error } = await supabase.from('profiles').select('*').eq('id', params.id).single()
+
+      if (error) {
+        console.error('Error loading professional profile:', error)
+        setLoadError(`${error.message} (code: ${error.code || 'none'})`)
+        setLoading(false)
+        return
+      }
+      if (!data) {
+        console.error('No profile row returned for id:', params.id)
+        setLoadError('No profile found for this id.')
+        setLoading(false)
+        return
+      }
+
       setProfile(data)
-      const { data: reviewData } = await supabase.from('reviews')
+      const { data: reviewData, error: reviewError } = await supabase.from('reviews')
         .select('*, reviewer:profiles!reviews_reviewer_id_fkey(full_name, avatar_url, role)')
         .eq('reviewed_id', params.id).order('created_at', { ascending: false })
+      if (reviewError) console.error('Error loading reviews:', reviewError)
       setReviews(reviewData || [])
       setLoading(false)
     }
@@ -175,6 +194,16 @@ export default function ProfessionalProfilePage({ params }) {
   )
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
+
+  if (loadError) return (
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ background: C.raised, border: `1px solid ${C.danger}44`, borderRadius: '12px', padding: '28px', maxWidth: '480px', textAlign: 'center' }}>
+        <p style={{ color: C.danger, fontWeight: '700', margin: '0 0 8px' }}>Could not load this profile</p>
+        <p style={{ color: C.muted, fontSize: '13px', margin: '0 0 16px' }}>{loadError}</p>
+        <Link href="/browse" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>← Back to Browse</Link>
+      </div>
+    </div>
+  )
 
   return (
     <div style={{ minHeight: '100vh', background: C.surface, color: C.text }}>
