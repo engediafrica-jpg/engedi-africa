@@ -24,25 +24,13 @@ export default function RequestQuoteForm({ providerId, providerName }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [budget, setBudget] = useState('')
-  const [timeframe, setTimeframe] = useState('asap')
+  const [scheduledDate, setScheduledDate] = useState('')
   const [location, setLocation] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
 
-  function scheduledDateFromTimeframe(tf) {
-    const now = new Date()
-    if (tf === 'asap') return now.toISOString()
-    if (tf === 'this_week') {
-      now.setDate(now.getDate() + 7)
-      return now.toISOString()
-    }
-    if (tf === 'next_week') {
-      now.setDate(now.getDate() + 14)
-      return now.toISOString()
-    }
-    return null
-  }
+  const todayStr = new Date().toISOString().split('T')[0]
 
   async function handleSubmit() {
     setError('')
@@ -78,10 +66,10 @@ export default function RequestQuoteForm({ providerId, providerName }) {
         location: location.trim() || null,
         budget: budget ? Number(budget) : null,
         status: 'pending',
-        payment_status: 'unpaid',
+        payment_status: 'pending',
         escrow_released: false,
         dispute_raised: false,
-        scheduled_date: scheduledDateFromTimeframe(timeframe),
+        scheduled_date: scheduledDate || null,
       })
       .select()
       .single()
@@ -92,6 +80,7 @@ export default function RequestQuoteForm({ providerId, providerName }) {
       return
     }
 
+    // Notify the provider
     await supabase.from('notifications').insert({
       user_id: providerId,
       type: 'new_booking_request',
@@ -181,18 +170,15 @@ export default function RequestQuoteForm({ providerId, providerName }) {
         </div>
         <div style={{ flex: 1 }}>
           <label style={{ display: 'block', textTransform: 'uppercase', letterSpacing: 0.5, fontSize: 12, color: C.muted, marginBottom: 6 }}>
-            Timeframe
+            Preferred Date
           </label>
-          <select
-            value={timeframe}
-            onChange={(e) => setTimeframe(e.target.value)}
+          <input
+            type="date"
+            min={todayStr}
+            value={scheduledDate}
+            onChange={(e) => setScheduledDate(e.target.value)}
             style={{ width: '100%', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: 8, padding: '10px 12px', color: C.text, fontSize: 14, boxSizing: 'border-box' }}
-          >
-            <option value="asap">ASAP</option>
-            <option value="this_week">This week</option>
-            <option value="next_week">Next week</option>
-            <option value="flexible">Flexible</option>
-          </select>
+          />
         </div>
       </div>
 

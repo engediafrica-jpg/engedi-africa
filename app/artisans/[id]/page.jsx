@@ -33,7 +33,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
       budget: form.budget ? Number(form.budget) : null,
       scheduled_date: form.scheduled_date || null,
       status: 'pending',
-      payment_status: 'unpaid',
+      payment_status: 'pending',
     })
     if (insertError) {
       setError('Error: ' + insertError.message)

@@ -18,16 +18,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
   const [error, setError] = useState('')
 
   const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
-
-  const scheduledDateFromTimeframe = (tf) => {
-    const now = new Date()
-    if (tf === 'asap') return now.toISOString().split('T')[0]
-    if (tf === 'this_week') { now.setDate(now.getDate() + 7); return now.toISOString().split('T')[0] }
-    if (tf === 'next_week') { now.setDate(now.getDate() + 14); return now.toISOString().split('T')[0] }
-    if (tf === 'this_month') { now.setDate(now.getDate() + 30); return now.toISOString().split('T')[0] }
-    if (tf === 'next_month') { now.setDate(now.getDate() + 60); return now.toISOString().split('T')[0] }
-    return null // 'flexible' or empty — no specific date
-  }
+  const todayStr = new Date().toISOString().split('T')[0]
 
   const handleSubmit = async () => {
     if (!form.title || !form.description) { setError('Please fill in job title and description'); return }
@@ -40,9 +31,9 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
       description: form.description,
       location: form.location || null,
       budget: form.budget ? Number(form.budget) : null,
-      scheduled_date: scheduledDateFromTimeframe(form.scheduled_date),
+      scheduled_date: form.scheduled_date || null,
       status: 'pending',
-      payment_status: 'unpaid',
+      payment_status: 'pending',
     })
     if (insertError) { setError('Error: ' + insertError.message); setSubmitting(false); return }
     await supabase.from('notifications').insert({
@@ -83,16 +74,14 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
             <input type="number" placeholder="Your budget" value={form.budget} onChange={e => setForm({ ...form, budget: e.target.value })} style={inputStyle} />
           </div>
           <div style={{ flex: 1, minWidth: '140px' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Preferred Timeframe</label>
-            <select value={form.scheduled_date} onChange={e => setForm({ ...form, scheduled_date: e.target.value })} style={{ ...inputStyle, appearance: 'none' }}>
-              <option value="" style={{ background: C.sunk }}>Select timeframe</option>
-              <option value="asap" style={{ background: C.sunk }}>As soon as possible</option>
-              <option value="this_week" style={{ background: C.sunk }}>This week</option>
-              <option value="next_week" style={{ background: C.sunk }}>Next week</option>
-              <option value="this_month" style={{ background: C.sunk }}>This month</option>
-              <option value="next_month" style={{ background: C.sunk }}>Next month</option>
-              <option value="flexible" style={{ background: C.sunk }}>I am flexible</option>
-            </select>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Preferred Date</label>
+            <input
+              type="date"
+              min={todayStr}
+              value={form.scheduled_date}
+              onChange={e => setForm({ ...form, scheduled_date: e.target.value })}
+              style={inputStyle}
+            />
           </div>
         </div>
         {error && <p style={{ color: C.danger, fontSize: '13px', margin: 0, fontWeight: '600' }}>{error}</p>}
