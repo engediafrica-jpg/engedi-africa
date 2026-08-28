@@ -15,6 +15,12 @@ const COPY = {
     cta: 'Go to Training Hub',
     href: '/training',
   },
+  deactivated: {
+    title: 'This account has been deactivated',
+    body: 'Your account access has been paused by an EnGedi Africa administrator. If you believe this is a mistake, please contact support.',
+    cta: 'Contact Support',
+    href: 'mailto:support@engediafrica.com',
+  },
 }
 
 export default function LockedNotice({ reason }) {

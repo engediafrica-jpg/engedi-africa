@@ -44,6 +44,15 @@ const teamRoleDescription = {
   support: 'Disputes and Bookings only',
 }
 
+const roleLabel = {
+  project_owner: 'Project Owner',
+  artisan: 'Artisan',
+  supplier: 'Supplier',
+  professional: 'Professional',
+  service_provider: 'Service Provider',
+  equipment_provider: 'Equipment Provider',
+}
+
 export default function AdminPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -84,6 +93,16 @@ export default function AdminPage() {
   const [disputes, setDisputes] = useState([])
   const [disputesLoading, setDisputesLoading] = useState(false)
 
+  // Search & filters
+  const [searchQuery, setSearchQuery] = useState('')
+  const [roleFilter, setRoleFilter] = useState('all')
+  const [verificationFilter, setVerificationFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('all') // all | active | deactivated
+
+  // Deactivate / delete
+  const [togglingActive, setTogglingActive] = useState(null)
+  const [deletingUser, setDeletingUser] = useState(null)
+
   useEffect(() => {
     const getData = async () => {
       const { data: sessionData } = await supabase.auth.getSession()
@@ -92,7 +111,13 @@ export default function AdminPage() {
       const { data: me } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       if (!me?.is_admin) { router.push('/dashboard'); return }
 
-      const { data } = await supabase.from('profiles').select('*').order('created_at', { ascending: false })
+      // Exclude team members from the regular Users view — they're managed under Team
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .or('is_team_member.eq.false,is_team_member.is.null')
+        .order('created_at', { ascending: false })
+
       setUsers(data || [])
       setLoading(false)
     }
@@ -188,6 +213,42 @@ export default function AdminPage() {
     setTimeout(() => setMessage(''), 3000)
   }
 
+  const handleToggleActive = async (userId, currentlyActive) => {
+    setTogglingActive(userId)
+    const newActive = !currentlyActive
+    const { error } = await supabase.from('profiles').update({ is_active: newActive }).eq('id', userId)
+    if (!error) {
+      setUsers(users.map((u) => u.id === userId ? { ...u, is_active: newActive } : u))
+      setMessage(newActive ? 'Account reactivated' : 'Account deactivated')
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage('Error updating account status')
+    }
+    setTogglingActive(null)
+  }
+
+  const handleDeleteUser = async (userId, userName) => {
+    if (!confirm(`Permanently delete ${userName || 'this user'}? This cannot be undone.`)) return
+    setDeletingUser(userId)
+
+    const res = await fetch('/api/admin/delete-user', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: userId }),
+    })
+    const data = await res.json()
+
+    if (data.success) {
+      setUsers(users.filter((u) => u.id !== userId))
+      if (selected?.id === userId) { setSelected(null); setDocUrls({}) }
+      setMessage('User deleted successfully')
+      setTimeout(() => setMessage(''), 3000)
+    } else {
+      setMessage('Error: ' + data.error)
+    }
+    setDeletingUser(null)
+  }
+
   const handleCreateTeamMember = async () => {
     if (!teamForm.full_name || !teamForm.email || !teamForm.password) { setMessage('Please fill all fields'); return }
     if (teamForm.password.length < 6) { setMessage('Password must be at least 6 characters'); return }
@@ -203,11 +264,15 @@ export default function AdminPage() {
     const data = await res.json()
 
     if (data.success) {
-      setMessage(
-        teamForm.team_role === 'field_marketer'
-          ? `Team member created. Referral code: ${data.referral_code}`
-          : 'Team member created successfully'
-      )
+      if (data.email_sent === false) {
+        setMessage(`Team member created, but the welcome email failed to send (${data.email_error || 'unknown error'}). Share their login details manually.`)
+      } else {
+        setMessage(
+          teamForm.team_role === 'field_marketer'
+            ? `Team member created and emailed. Referral code: ${data.referral_code}`
+            : 'Team member created and emailed successfully'
+        )
+      }
       setTeamForm({ full_name: '', email: '', password: '', team_role: 'field_marketer' })
       setShowTeamForm(false)
       await loadTeam()
@@ -259,16 +324,6 @@ export default function AdminPage() {
     }
   }
 
-  const roleLabel = {
-    project_owner: 'Project Owner',
-    artisan: 'Artisan',
-    supplier: 'Supplier',
-    professional: 'Professional',
-    service_provider: 'Service Provider',
-    equipment_provider: 'Equipment Provider',
-    field_marketer: 'Field Marketer',
-  }
-
   const trainingByUser = training.reduce((acc, item) => {
     const uid = item.user_id
     if (!acc[uid]) acc[uid] = { user: item.user, modules: [] }
@@ -277,6 +332,24 @@ export default function AdminPage() {
   }, {})
 
   const pendingVerification = users.filter((u) => u.documents_submitted && u.verification_status === 'pending')
+
+  // Apply search + filters to whichever list (all users or pending) is active
+  const applyFilters = (list) => {
+    return list.filter((u) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.trim().toLowerCase()
+        const matchesSearch = (u.full_name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q)
+        if (!matchesSearch) return false
+      }
+      if (roleFilter !== 'all' && u.role !== roleFilter) return false
+      if (verificationFilter !== 'all' && (u.verification_status || 'pending') !== verificationFilter) return false
+      if (statusFilter === 'active' && u.is_active === false) return false
+      if (statusFilter === 'deactivated' && u.is_active !== false) return false
+      return true
+    })
+  }
+
+  const visibleUsers = applyFilters(activeSection === 'pending' ? pendingVerification : users)
 
   const sections = [
     { key: 'overview', label: 'Overview', icon: '◆' },
@@ -627,151 +700,207 @@ export default function AdminPage() {
           )}
 
           {(activeSection === 'users' || activeSection === 'pending') && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(activeSection === 'pending' ? pendingVerification : users).map((user) => (
-                <div key={user.id} style={{
-                  background: C.white,
-                  border: `1px solid ${selected?.id === user.id ? C.laterite : C.border}`,
-                  borderRadius: '12px', padding: '20px',
-                  boxShadow: selected?.id === user.id ? '0 4px 15px rgba(139,94,60,0.08)' : 'none',
-                }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-                      <div style={{ position: 'relative', flexShrink: 0 }}>
-                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: C.lateriteSoft, border: `2px solid ${user.is_verified ? C.black : C.laterite}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.laterite, fontSize: '18px', overflow: 'hidden' }}>
-                          {user.avatar_url ? <img src={user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.full_name?.charAt(0)?.toUpperCase() || '?')}
-                        </div>
-                        {user.is_verified && (
-                          <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderRadius: '50%', background: C.black, border: `2px solid ${C.white}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ color: C.white, fontSize: '9px', fontWeight: '800' }}>✓</span>
+            <div>
+              {/* Search + filters */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
+                <input
+                  type="text"
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{ flex: '2 1 220px', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', boxSizing: 'border-box', background: C.white }}
+                />
+                <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)}
+                  style={{ flex: '1 1 150px', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', background: C.white, appearance: 'none' }}>
+                  <option value="all">All Roles</option>
+                  {Object.entries(roleLabel).map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+                <select value={verificationFilter} onChange={(e) => setVerificationFilter(e.target.value)}
+                  style={{ flex: '1 1 150px', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', background: C.white, appearance: 'none' }}>
+                  <option value="all">All Verification</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{ flex: '1 1 150px', padding: '10px 12px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', background: C.white, appearance: 'none' }}>
+                  <option value="all">All Statuses</option>
+                  <option value="active">Active</option>
+                  <option value="deactivated">Deactivated</option>
+                </select>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {visibleUsers.map((user) => {
+                  const isDeactivated = user.is_active === false
+                  return (
+                  <div key={user.id} style={{
+                    background: C.white,
+                    border: `1px solid ${selected?.id === user.id ? C.laterite : isDeactivated ? C.danger + '55' : C.border}`,
+                    borderRadius: '12px', padding: '20px',
+                    boxShadow: selected?.id === user.id ? '0 4px 15px rgba(139,94,60,0.08)' : 'none',
+                    opacity: isDeactivated ? 0.7 : 1,
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
+                        <div style={{ position: 'relative', flexShrink: 0 }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: C.lateriteSoft, border: `2px solid ${user.is_verified ? C.black : C.laterite}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.laterite, fontSize: '18px', overflow: 'hidden' }}>
+                            {user.avatar_url ? <img src={user.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : (user.full_name?.charAt(0)?.toUpperCase() || '?')}
                           </div>
-                        )}
-                      </div>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                          <p style={{ margin: 0, fontWeight: '800', fontSize: '15px', color: C.black }}>{user.full_name || 'No name'}</p>
-                          {user.is_admin && <span style={{ background: C.black, color: C.white, fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '20px', letterSpacing: '0.5px' }}>ADMIN</span>}
-                          {user.is_verified && <span style={{ background: C.lateriteSoft, border: `1px solid ${C.laterite}`, color: C.lateriteDark, fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '20px' }}>VERIFIED</span>}
-                        </div>
-                        <p style={{ margin: '0 0 8px', fontSize: '13px', color: C.muted }}>{user.email}</p>
-                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                          <span style={{ background: C.lateriteSoft, border: `1px solid ${C.laterite}`, color: C.lateriteDark, fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px' }}>
-                            {roleLabel[user.role] || user.role || 'No role'}
-                          </span>
-                          <span style={{
-                            background: user.verification_status === 'approved' ? C.successBg : user.verification_status === 'rejected' ? C.dangerBg : C.warningBg,
-                            border: `1px solid ${user.verification_status === 'approved' ? C.success : user.verification_status === 'rejected' ? C.danger : C.warning}`,
-                            color: user.verification_status === 'approved' ? C.success : user.verification_status === 'rejected' ? C.danger : C.warning,
-                            fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px',
-                          }}>
-                            {user.verification_status || 'pending'}
-                          </span>
-                          {user.documents_submitted && (
-                            <span style={{ background: C.background, border: `1px solid ${C.border}`, color: C.muted, fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px' }}>
-                              Docs Submitted
-                            </span>
+                          {user.is_verified && (
+                            <div style={{ position: 'absolute', bottom: 0, right: 0, width: '16px', height: '16px', borderRadius: '50%', background: C.black, border: `2px solid ${C.white}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <span style={{ color: C.white, fontSize: '9px', fontWeight: '800' }}>✓</span>
+                            </div>
                           )}
                         </div>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                            <p style={{ margin: 0, fontWeight: '800', fontSize: '15px', color: C.black }}>{user.full_name || 'No name'}</p>
+                            {user.is_admin && <span style={{ background: C.black, color: C.white, fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '20px', letterSpacing: '0.5px' }}>ADMIN</span>}
+                            {user.is_verified && <span style={{ background: C.lateriteSoft, border: `1px solid ${C.laterite}`, color: C.lateriteDark, fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '20px' }}>VERIFIED</span>}
+                            {isDeactivated && <span style={{ background: C.dangerBg, border: `1px solid ${C.danger}`, color: C.danger, fontSize: '9px', fontWeight: '800', padding: '3px 7px', borderRadius: '20px' }}>DEACTIVATED</span>}
+                          </div>
+                          <p style={{ margin: '0 0 8px', fontSize: '13px', color: C.muted }}>{user.email}</p>
+                          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <span style={{ background: C.lateriteSoft, border: `1px solid ${C.laterite}`, color: C.lateriteDark, fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px' }}>
+                              {roleLabel[user.role] || user.role || 'No role'}
+                            </span>
+                            <span style={{
+                              background: user.verification_status === 'approved' ? C.successBg : user.verification_status === 'rejected' ? C.dangerBg : C.warningBg,
+                              border: `1px solid ${user.verification_status === 'approved' ? C.success : user.verification_status === 'rejected' ? C.danger : C.warning}`,
+                              color: user.verification_status === 'approved' ? C.success : user.verification_status === 'rejected' ? C.danger : C.warning,
+                              fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px',
+                            }}>
+                              {user.verification_status || 'pending'}
+                            </span>
+                            {user.documents_submitted && (
+                              <span style={{ background: C.background, border: `1px solid ${C.border}`, color: C.muted, fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px' }}>
+                                Docs Submitted
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button onClick={() => handleSelect(user)} style={{
+                          background: selected?.id === user.id ? C.black : C.lateriteSoft,
+                          border: `1px solid ${selected?.id === user.id ? C.black : C.laterite}`,
+                          color: selected?.id === user.id ? C.white : C.lateriteDark,
+                          padding: '8px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                        }}>
+                          {selected?.id === user.id ? 'Close' : 'Review'}
+                        </button>
+                        <button onClick={() => handleToggleActive(user.id, user.is_active !== false)} disabled={togglingActive === user.id}
+                          style={{
+                            background: isDeactivated ? C.successBg : C.warningBg,
+                            border: `1px solid ${isDeactivated ? C.success : C.warning}`,
+                            color: isDeactivated ? C.success : C.warning,
+                            padding: '8px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                          }}>
+                          {togglingActive === user.id ? '...' : isDeactivated ? 'Reactivate' : 'Deactivate'}
+                        </button>
+                        <button onClick={() => handleDeleteUser(user.id, user.full_name)} disabled={deletingUser === user.id}
+                          style={{
+                            background: C.dangerBg, border: `1px solid ${C.danger}`, color: C.danger,
+                            padding: '8px 14px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                          }}>
+                          {deletingUser === user.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </div>
                     </div>
-                    <button onClick={() => handleSelect(user)} style={{
-                      background: selected?.id === user.id ? C.black : C.lateriteSoft,
-                      border: `1px solid ${selected?.id === user.id ? C.black : C.laterite}`,
-                      color: selected?.id === user.id ? C.white : C.lateriteDark,
-                      padding: '8px 16px', borderRadius: '7px', cursor: 'pointer', fontSize: '12px', fontWeight: '700',
-                    }}>
-                      {selected?.id === user.id ? 'Close' : 'Review'}
-                    </button>
-                  </div>
 
-                  {selected?.id === user.id && (
-                    <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: `1px solid ${C.border}` }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '9px', marginBottom: '20px' }}>
-                        {[
-                          { label: 'Phone', value: user.phone },
-                          { label: 'City', value: user.city },
-                          { label: 'State', value: user.state },
-                          { label: 'Company', value: user.company_name },
-                          { label: 'Experience', value: user.experience_years ? `${user.experience_years} years` : null },
-                          { label: 'Professional Body', value: user.professional_body },
-                          { label: 'License Number', value: user.professional_license_number },
-                          { label: 'CAC Number', value: user.cac_number },
-                        ].filter((field) => field.value).map((field) => (
-                          <div key={field.label} style={{ background: C.background, padding: '11px 12px', borderRadius: '7px' }}>
-                            <p style={{ margin: '0 0 3px', fontSize: '9px', color: C.lightMuted, fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{field.label}</p>
-                            <p style={{ margin: 0, fontSize: '13px', color: C.black, fontWeight: '600' }}>{field.value}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {user.bio && (
-                        <div style={{ background: C.background, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
-                          <p style={{ margin: '0 0 6px', fontSize: '10px', color: C.lightMuted, fontWeight: '800', textTransform: 'uppercase' }}>Bio</p>
-                          <p style={{ margin: 0, fontSize: '14px', color: C.black, lineHeight: '1.6' }}>{user.bio}</p>
+                    {selected?.id === user.id && (
+                      <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: `1px solid ${C.border}` }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '9px', marginBottom: '20px' }}>
+                          {[
+                            { label: 'Phone', value: user.phone },
+                            { label: 'City', value: user.city },
+                            { label: 'State', value: user.state },
+                            { label: 'Company', value: user.company_name },
+                            { label: 'Experience', value: user.experience_years ? `${user.experience_years} years` : null },
+                            { label: 'Professional Body', value: user.professional_body },
+                            { label: 'License Number', value: user.professional_license_number },
+                            { label: 'CAC Number', value: user.cac_number },
+                          ].filter((field) => field.value).map((field) => (
+                            <div key={field.label} style={{ background: C.background, padding: '11px 12px', borderRadius: '7px' }}>
+                              <p style={{ margin: '0 0 3px', fontSize: '9px', color: C.lightMuted, fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.6px' }}>{field.label}</p>
+                              <p style={{ margin: 0, fontSize: '13px', color: C.black, fontWeight: '600' }}>{field.value}</p>
+                            </div>
+                          ))}
                         </div>
-                      )}
 
-                      <div style={{ marginBottom: '20px' }}>
-                        <p style={{ fontSize: '13px', fontWeight: '800', color: C.black, marginBottom: '12px' }}>Uploaded Documents</p>
-                        {loadingDocs ? <p style={{ color: C.lightMuted, fontSize: '13px' }}>Loading...</p> : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {docUrls.id ? (
-                              <a href={docUrls.id} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
-                                <span style={{ fontSize: '20px' }}>🪪</span>
-                                <div>
-                                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>Government ID</p>
-                                  <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
-                                </div>
-                              </a>
-                            ) : (
-                              <div style={{ background: C.background, padding: '14px', borderRadius: '9px', border: `1px solid ${C.border}` }}>
-                                <p style={{ margin: 0, fontSize: '12px', color: C.lightMuted }}>🪪 No government ID uploaded</p>
-                              </div>
-                            )}
-                            {user.cac_document_url && docUrls.cac && (
-                              <a href={docUrls.cac} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
-                                <span style={{ fontSize: '20px' }}>🏢</span>
-                                <div>
-                                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>CAC Certificate</p>
-                                  <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
-                                </div>
-                              </a>
-                            )}
-                            {user.professional_license_url && docUrls.license && (
-                              <a href={docUrls.license} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
-                                <span style={{ fontSize: '20px' }}>📋</span>
-                                <div>
-                                  <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>Professional License</p>
-                                  <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
-                                </div>
-                              </a>
-                            )}
-                            {!user.id_document_url && !user.cac_document_url && !user.professional_license_url && (
-                              <p style={{ color: C.lightMuted, fontSize: '12px', margin: 0 }}>No documents uploaded yet</p>
-                            )}
+                        {user.bio && (
+                          <div style={{ background: C.background, padding: '15px', borderRadius: '8px', marginBottom: '20px' }}>
+                            <p style={{ margin: '0 0 6px', fontSize: '10px', color: C.lightMuted, fontWeight: '800', textTransform: 'uppercase' }}>Bio</p>
+                            <p style={{ margin: 0, fontSize: '14px', color: C.black, lineHeight: '1.6' }}>{user.bio}</p>
                           </div>
                         )}
-                      </div>
 
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: C.black, marginBottom: '6px' }}>Admin Note</label>
-                        <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for approval or rejection..."
-                          style={{ width: '100%', padding: '11px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
-                      </div>
+                        <div style={{ marginBottom: '20px' }}>
+                          <p style={{ fontSize: '13px', fontWeight: '800', color: C.black, marginBottom: '12px' }}>Uploaded Documents</p>
+                          {loadingDocs ? <p style={{ color: C.lightMuted, fontSize: '13px' }}>Loading...</p> : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {docUrls.id ? (
+                                <a href={docUrls.id} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
+                                  <span style={{ fontSize: '20px' }}>🪪</span>
+                                  <div>
+                                    <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>Government ID</p>
+                                    <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
+                                  </div>
+                                </a>
+                              ) : (
+                                <div style={{ background: C.background, padding: '14px', borderRadius: '9px', border: `1px solid ${C.border}` }}>
+                                  <p style={{ margin: 0, fontSize: '12px', color: C.lightMuted }}>🪪 No government ID uploaded</p>
+                                </div>
+                              )}
+                              {user.cac_document_url && docUrls.cac && (
+                                <a href={docUrls.cac} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
+                                  <span style={{ fontSize: '20px' }}>🏢</span>
+                                  <div>
+                                    <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>CAC Certificate</p>
+                                    <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
+                                  </div>
+                                </a>
+                              )}
+                              {user.professional_license_url && docUrls.license && (
+                                <a href={docUrls.license} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: '12px', background: C.background, padding: '14px', borderRadius: '9px', textDecoration: 'none', border: `1px solid ${C.border}` }}>
+                                  <span style={{ fontSize: '20px' }}>📋</span>
+                                  <div>
+                                    <p style={{ margin: '0 0 2px', fontSize: '13px', fontWeight: '800', color: C.black }}>Professional License</p>
+                                    <p style={{ margin: 0, fontSize: '11px', color: C.laterite, fontWeight: '700' }}>Click to view →</p>
+                                  </div>
+                                </a>
+                              )}
+                              {!user.id_document_url && !user.cac_document_url && !user.professional_license_url && (
+                                <p style={{ color: C.lightMuted, fontSize: '12px', margin: 0 }}>No documents uploaded yet</p>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
-                      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                        <button onClick={() => handleVerify(user.id, 'approved')} style={{ background: C.black, color: C.white, border: 'none', padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>✓ Approve</button>
-                        <button onClick={() => handleVerify(user.id, 'rejected')} style={{ background: C.dangerBg, color: C.danger, border: `1px solid ${C.danger}`, padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>Reject</button>
-                        <button onClick={() => handleVerify(user.id, 'pending')} style={{ background: C.white, color: C.lateriteDark, border: `1px solid ${C.laterite}`, padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>Reset to Pending</button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
+                        <div style={{ marginBottom: '16px' }}>
+                          <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: C.black, marginBottom: '6px' }}>Admin Note</label>
+                          <input type="text" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Reason for approval or rejection..."
+                            style={{ width: '100%', padding: '11px', border: `1px solid ${C.border}`, borderRadius: '7px', fontSize: '13px', outline: 'none', boxSizing: 'border-box' }} />
+                        </div>
 
-              {activeSection === 'pending' && pendingVerification.length === 0 && (
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button onClick={() => handleVerify(user.id, 'approved')} style={{ background: C.black, color: C.white, border: 'none', padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>✓ Approve</button>
+                          <button onClick={() => handleVerify(user.id, 'rejected')} style={{ background: C.dangerBg, color: C.danger, border: `1px solid ${C.danger}`, padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>Reject</button>
+                          <button onClick={() => handleVerify(user.id, 'pending')} style={{ background: C.white, color: C.lateriteDark, border: `1px solid ${C.laterite}`, padding: '11px 20px', borderRadius: '7px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}>Reset to Pending</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )})}
+              </div>
+
+              {visibleUsers.length === 0 && (
                 <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '50px 30px', textAlign: 'center' }}>
-                  <p style={{ color: C.lightMuted, fontSize: '14px', margin: 0, fontWeight: '700' }}>No pending verifications</p>
+                  <p style={{ color: C.lightMuted, fontSize: '14px', margin: 0, fontWeight: '700' }}>No users match your search/filters</p>
                 </div>
               )}
             </div>
