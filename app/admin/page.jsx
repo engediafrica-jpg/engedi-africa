@@ -93,6 +93,9 @@ export default function AdminPage() {
   const [disputes, setDisputes] = useState([])
   const [disputesLoading, setDisputesLoading] = useState(false)
 
+  const [projects, setProjects] = useState([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+
   // Search & filters
   const [searchQuery, setSearchQuery] = useState('')
   const [roleFilter, setRoleFilter] = useState('all')
@@ -164,6 +167,16 @@ export default function AdminPage() {
       .order('created_at', { ascending: false })
     setDisputes(data || [])
     setDisputesLoading(false)
+  }
+
+  const loadProjects = async () => {
+    setProjectsLoading(true)
+    const { data } = await supabase
+      .from('projects')
+      .select('*, owner:profiles!projects_owner_id_fkey(full_name, email), project_stages(id, status), bookings(id, status, dispute_raised)')
+      .order('created_at', { ascending: false })
+    setProjects(data || [])
+    setProjectsLoading(false)
   }
 
   const loadDocuments = async (user) => {
@@ -333,7 +346,6 @@ export default function AdminPage() {
 
   const pendingVerification = users.filter((u) => u.documents_submitted && u.verification_status === 'pending')
 
-  // Apply search + filters to whichever list (all users or pending) is active
   const applyFilters = (list) => {
     return list.filter((u) => {
       if (searchQuery.trim()) {
@@ -351,12 +363,15 @@ export default function AdminPage() {
 
   const visibleUsers = applyFilters(activeSection === 'pending' ? pendingVerification : users)
 
+  const projectsWithDisputes = projects.filter(p => p.bookings?.some(b => b.dispute_raised)).length
+
   const sections = [
     { key: 'overview', label: 'Overview', icon: '◆' },
     { key: 'users', label: 'All Users', icon: '◈', count: users.length },
     { key: 'pending', label: 'Pending Review', icon: '◉', count: pendingVerification.length },
     { key: 'training', label: 'Training', icon: '◎' },
     { key: 'team', label: 'Team', icon: '◐', count: team.length },
+    { key: 'projects', label: 'Projects', icon: '◫', count: projectsWithDisputes > 0 ? projectsWithDisputes : undefined },
     { key: 'disputes', label: 'Disputes', icon: '◇' },
     { key: 'revenue', label: 'Revenue', icon: '◒' },
   ]
@@ -367,6 +382,7 @@ export default function AdminPage() {
     if (key === 'team' && team.length === 0) loadTeam()
     if (key === 'revenue') loadRevenue()
     if (key === 'disputes' && disputes.length === 0) loadDisputes()
+    if (key === 'projects' && projects.length === 0) loadProjects()
   }
 
   if (loading) {
@@ -554,6 +570,58 @@ export default function AdminPage() {
             </div>
           )}
 
+          {activeSection === 'projects' && (
+            <div>
+              {projectsLoading ? <p style={{ color: C.muted }}>Loading projects...</p>
+                : projects.length === 0 ? (
+                  <div style={{ background: C.white, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '50px 30px', textAlign: 'center' }}>
+                    <p style={{ color: C.lightMuted, fontSize: '14px', margin: 0, fontWeight: '600' }}>No projects yet</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {projects.map((project) => {
+                      const stages = project.project_stages || []
+                      const completed = stages.filter(s => s.status === 'completed').length
+                      const progress = stages.length > 0 ? Math.round((completed / stages.length) * 100) : 0
+                      const bookings = project.bookings || []
+                      const disputedCount = bookings.filter(b => b.dispute_raised).length
+                      const hasDispute = disputedCount > 0
+
+                      return (
+                        <div key={project.id} style={{ background: C.white, border: `1px solid ${hasDispute ? C.danger : C.border}`, borderRadius: '12px', padding: '20px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                                <p style={{ margin: 0, fontWeight: '800', fontSize: '15px', color: C.black }}>{project.title}</p>
+                                {hasDispute && (
+                                  <span style={{ background: C.dangerBg, border: `1px solid ${C.danger}`, color: C.danger, fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '20px' }}>
+                                    {disputedCount} DISPUTE{disputedCount > 1 ? 'S' : ''}
+                                  </span>
+                                )}
+                                <span style={{ background: C.lateriteSoft, border: `1px solid ${C.laterite}`, color: C.lateriteDark, fontSize: '10px', fontWeight: '700', padding: '3px 8px', borderRadius: '20px', textTransform: 'capitalize' }}>
+                                  {project.status?.replace('_', ' ')}
+                                </span>
+                              </div>
+                              <p style={{ margin: '0 0 4px', fontSize: '13px', color: C.muted }}>
+                                Owner: {project.owner?.full_name} · {project.owner?.email}
+                              </p>
+                              <p style={{ margin: 0, fontSize: '12px', color: C.lightMuted }}>
+                                {project.location || 'No location'} {project.budget && `· ₦${Number(project.budget).toLocaleString()}`} · {stages.length} stages ({progress}% complete) · {bookings.length} linked booking{bookings.length !== 1 ? 's' : ''}
+                              </p>
+                            </div>
+                            <a href={`/projects/${project.id}`} target="_blank" rel="noreferrer"
+                              style={{ background: C.black, color: C.white, textDecoration: 'none', padding: '8px 16px', borderRadius: '7px', fontWeight: '700', fontSize: '12px', flexShrink: 0 }}>
+                              View Project →
+                            </a>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+            </div>
+          )}
+
           {activeSection === 'team' && (
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
@@ -701,7 +769,6 @@ export default function AdminPage() {
 
           {(activeSection === 'users' || activeSection === 'pending') && (
             <div>
-              {/* Search + filters */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '18px' }}>
                 <input
                   type="text"
