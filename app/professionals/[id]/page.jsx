@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { nigeriaStates, nigeriaLGAs } from '@/lib/nigeria-lgas'
@@ -12,7 +12,7 @@ const C = {
   clay: '#e08554', oasis: '#86a98b', danger: '#e2695f', dangerSoft: '#2e1712',
 }
 
-function RequestQuoteButton({ profile, currentUser, supabase, router }) {
+function RequestQuoteButton({ profile, currentUser, supabase, router, projectId, projectTitle }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ title: '', description: '', state: '', lga: '', budget: '', scheduled_date: '' })
   const [submitting, setSubmitting] = useState(false)
@@ -38,6 +38,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
     const { error: insertError } = await supabase.from('bookings').insert({
       client_id: currentUser.id,
       provider_id: profile.id,
+      project_id: projectId || null,
       title: form.title,
       description: form.description,
       location: location || null,
@@ -59,14 +60,21 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
   if (done) return (
     <div style={{ background: '#1a2e1d', border: `1px solid ${C.oasis}44`, borderRadius: '10px', padding: '16px', textAlign: 'center' }}>
       <p style={{ margin: '0 0 6px', fontWeight: '700', color: C.oasis, fontSize: '14px' }}>✓ Quote request sent!</p>
-      <button onClick={() => router.push('/bookings')} style={{ background: 'none', border: 'none', color: C.clay, fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>View your bookings →</button>
+      <button onClick={() => router.push(projectId ? `/projects/${projectId}` : '/bookings')} style={{ background: 'none', border: 'none', color: C.clay, fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+        {projectId ? 'Back to project →' : 'View your bookings →'}
+      </button>
     </div>
   )
 
   if (showForm) return (
     <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '24px' }}>
-      <h3 style={{ fontSize: '15px', fontWeight: '700', color: C.text, margin: '0 0 20px' }}>Request a Quote from {profile.full_name?.split(' ')[0]}</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <h3 style={{ fontSize: '15px', fontWeight: '700', color: C.text, margin: '0 0 8px' }}>Request a Quote from {profile.full_name?.split(' ')[0]}</h3>
+      {projectId && projectTitle && (
+        <p style={{ fontSize: '12px', color: C.clay, margin: '0 0 16px', fontWeight: '600' }}>
+          For project: {projectTitle}
+        </p>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginTop: projectId ? 0 : '12px' }}>
         <div>
           <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: C.muted, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Job Title *</label>
           <input type="text" placeholder="e.g. Architectural drawings for 4-bedroom duplex" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={inputStyle} />
@@ -120,7 +128,7 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
 
   return (
     <button onClick={() => setShowForm(true)} style={{ width: '100%', background: C.clay, color: C.sunk, border: 'none', padding: '16px', borderRadius: '10px', fontSize: '15px', fontWeight: '700', cursor: 'pointer' }}>
-      Request a Quote
+      {projectId ? 'Request a Quote for This Project' : 'Request a Quote'}
     </button>
   )
 }
@@ -128,6 +136,9 @@ function RequestQuoteButton({ profile, currentUser, supabase, router }) {
 export default function ProfessionalProfilePage({ params }) {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const projectId = searchParams.get('project')
+
   const [profile, setProfile] = useState(null)
   const [currentUser, setCurrentUser] = useState(null)
   const [reviews, setReviews] = useState([])
@@ -141,6 +152,7 @@ export default function ProfessionalProfilePage({ params }) {
   const [submittingReview, setSubmittingReview] = useState(false)
   const [reviewMessage, setReviewMessage] = useState('')
   const [hoveredStar, setHoveredStar] = useState(0)
+  const [projectTitle, setProjectTitle] = useState('')
 
   const inputStyle = { width: '100%', padding: '12px', background: C.sunk, border: `1px solid ${C.line}`, borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', color: C.text }
 
@@ -177,6 +189,15 @@ export default function ProfessionalProfilePage({ params }) {
     }
     getData()
   }, [])
+
+  useEffect(() => {
+    if (!projectId) { setProjectTitle(''); return }
+    const loadProject = async () => {
+      const { data } = await supabase.from('projects').select('title').eq('id', projectId).single()
+      if (data) setProjectTitle(data.title)
+    }
+    loadProject()
+  }, [projectId])
 
   const avgRating = reviews.length > 0 ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1) : null
   const alreadyReviewed = reviews.some(r => r.reviewer_id === currentUser?.id)
@@ -228,10 +249,18 @@ export default function ProfessionalProfilePage({ params }) {
     <div style={{ minHeight: '100vh', background: C.surface, color: C.text }}>
       <div style={{ background: C.sunk, borderBottom: `1px solid ${C.line}`, padding: '0 24px', height: '60px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <Link href="/" style={{ color: C.clay, textDecoration: 'none', fontWeight: '800', fontSize: '18px' }}>EnGedi Africa</Link>
-        <Link href="/browse" style={{ color: C.muted, textDecoration: 'none', fontSize: '13px' }}>← Browse</Link>
+        <Link href={projectId ? `/browse?project=${projectId}` : '/browse'} style={{ color: C.muted, textDecoration: 'none', fontSize: '13px' }}>← Browse</Link>
       </div>
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '40px 24px' }}>
+
+        {projectId && projectTitle && (
+          <div style={{ background: C.sunk, border: `1px solid ${C.clay}44`, borderRadius: '8px', padding: '12px 16px', marginBottom: '16px' }}>
+            <p style={{ margin: 0, fontSize: '13px', color: C.clay, fontWeight: '600' }}>
+              Requesting a quote for: {projectTitle}
+            </p>
+          </div>
+        )}
 
         <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '28px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -325,7 +354,7 @@ export default function ProfessionalProfilePage({ params }) {
 
         {currentUser?.id !== profile.id && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <RequestQuoteButton profile={profile} currentUser={currentUser} supabase={supabase} router={router} />
+            <RequestQuoteButton profile={profile} currentUser={currentUser} supabase={supabase} router={router} projectId={projectId} projectTitle={projectTitle} />
             <button onClick={handleStartConversation} disabled={messaging || messageSent}
               style={{ width: '100%', background: 'transparent', color: C.clay, border: `1px solid ${C.clay}44`, padding: '14px', borderRadius: '10px', fontSize: '14px', fontWeight: '700', cursor: 'pointer' }}>
               {messageSent ? '✓ Chat started — redirecting...' : messaging ? 'Opening chat...' : `Message ${profile.full_name?.split(' ')[0]}`}

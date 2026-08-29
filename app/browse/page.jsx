@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import AppNav from '@/components/AppNav'
@@ -24,9 +24,16 @@ const roleLabel = {
   equipment_provider: 'Equipment Provider',
 }
 
+// Roles that go through the Bookings/Request Quote flow — the ones a
+// project can meaningfully attach a quote request to.
+const bookableRoles = ['artisan', 'professional', 'service_provider']
+
 export default function BrowsePage() {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const projectId = searchParams.get('project')
+
   const [users, setUsers] = useState([])
   const [filtered, setFiltered] = useState([])
   const [loading, setLoading] = useState(true)
@@ -34,10 +41,20 @@ export default function BrowsePage() {
   const [search, setSearch] = useState('')
   const [activeTab, setActiveTab] = useState('artisan')
   const [verifiedOnly, setVerifiedOnly] = useState(false)
+  const [projectTitle, setProjectTitle] = useState('')
 
   useEffect(() => {
     fetchUsers(activeTab)
   }, [activeTab])
+
+  useEffect(() => {
+    if (!projectId) { setProjectTitle(''); return }
+    const loadProject = async () => {
+      const { data } = await supabase.from('projects').select('title').eq('id', projectId).single()
+      if (data) setProjectTitle(data.title)
+    }
+    loadProject()
+  }, [projectId])
 
   useEffect(() => {
     let results = [...users]
@@ -69,10 +86,11 @@ export default function BrowsePage() {
   }
 
   const getProfileLink = (user) => {
-    if (user.role === 'artisan') return `/artisans/${user.id}`
+    const projectSuffix = (projectId && bookableRoles.includes(user.role)) ? `?project=${projectId}` : ''
+    if (user.role === 'artisan') return `/artisans/${user.id}${projectSuffix}`
     if (user.role === 'supplier') return `/suppliers/${user.id}`
-    if (user.role === 'professional') return `/professionals/${user.id}`
-    if (user.role === 'service_provider') return `/service-providers/${user.id}`
+    if (user.role === 'professional') return `/professionals/${user.id}${projectSuffix}`
+    if (user.role === 'service_provider') return `/service-providers/${user.id}${projectSuffix}`
     if (user.role === 'equipment_provider') return `/equipment-providers/${user.id}`
     return '/browse'
   }
@@ -83,7 +101,18 @@ export default function BrowsePage() {
 
       <div className="mx-auto max-w-[1000px] px-6 py-10">
         <h1 className="m-0 mb-2 text-[28px] font-bold text-text">Find Professionals</h1>
-        <p className="m-0 mb-8 text-[15px] text-text-muted">Browse verified artisans, suppliers, and professionals across Nigeria</p>
+        <p className="m-0 mb-4 text-[15px] text-text-muted">Browse verified artisans, suppliers, and professionals across Nigeria</p>
+
+        {projectId && projectTitle && (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-2 border border-clay bg-surface-raised px-4 py-3">
+            <p className="m-0 text-[13px] text-text">
+              Requesting a quote for <strong className="text-clay">{projectTitle}</strong> — pick someone below to attach the request to this project.
+            </p>
+            <button onClick={() => router.push('/browse')} className="text-[12px] font-semibold text-text-muted hover:text-text">
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Tabs */}
         <div className="mb-6 flex flex-wrap gap-2">
