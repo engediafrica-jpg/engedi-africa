@@ -31,6 +31,54 @@ const timeframeLabels = {
   flexible: 'Flexible',
 }
 
+// The statuses a booking actually moves through, in order.
+// Terminal/exception states (cancelled, disputed, declined) are excluded —
+// those get a plain badge instead of a stepper.
+const bookingStatusSteps = ['pending', 'quoted', 'paid', 'completed', 'delivered']
+
+const bookingStepLabels = {
+  pending: 'Requested',
+  quoted: 'Quoted',
+  paid: 'Paid',
+  completed: 'Job Done',
+  delivered: 'Confirmed',
+}
+
+function BookingProgressTracker({ status }) {
+  const currentStep = bookingStatusSteps.indexOf(status)
+  if (currentStep === -1) return null // cancelled / disputed / declined — no stepper
+
+  return (
+    <div style={{ marginBottom: '18px' }}>
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        {bookingStatusSteps.map((step, i) => (
+          <div key={step} style={{ display: 'flex', alignItems: 'center', flex: i < bookingStatusSteps.length - 1 ? 1 : 'unset' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{
+                width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                background: i <= currentStep ? C.clay : C.sunk,
+                border: `1px solid ${i <= currentStep ? C.clay : C.line}`,
+              }}>
+                {i <= currentStep
+                  ? <span style={{ color: C.sunk, fontSize: '11px', fontWeight: '800' }}>✓</span>
+                  : <span style={{ color: C.muted, fontSize: '10px', fontWeight: '700' }}>{i + 1}</span>
+                }
+              </div>
+              <p style={{ margin: '4px 0 0', fontSize: '10px', whiteSpace: 'nowrap', color: i <= currentStep ? C.text : C.muted, fontWeight: i <= currentStep ? '700' : '400' }}>
+                {bookingStepLabels[step]}
+              </p>
+            </div>
+            {i < bookingStatusSteps.length - 1 && (
+              <div style={{ flex: 1, height: '1px', margin: '0 4px 16px', background: i < currentStep ? C.clay : C.line }} />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function BookingsPage() {
   const supabase = createClient()
   const router = useRouter()
@@ -57,7 +105,6 @@ export default function BookingsPage() {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       setProfile(profileData)
 
-      // Determine initial tab based on role
       const initialTab = providerRoles.includes(profileData.role) ? 'provider' : 'client'
       setActiveTab(initialTab)
       await loadBookings(sessionData.session.user.id, initialTab)
@@ -263,7 +310,6 @@ export default function BookingsPage() {
         <Link href="/dashboard" style={{ color: C.muted, textDecoration: 'none', fontSize: '13px' }}>← Dashboard</Link>
       </div>
 
-      {/* Dispute modal */}
       {disputeBooking && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: '#000000cc', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
           <div style={{ background: C.raised, border: `1px solid ${C.danger}44`, borderRadius: '12px', padding: '32px', width: '100%', maxWidth: '480px' }}>
@@ -293,7 +339,6 @@ export default function BookingsPage() {
           {isProviderRole ? 'Manage your job requests and send quotes' : 'Manage your bookings and track job progress'}
         </p>
 
-        {/* Tabs — only show both if they could be both client and provider */}
         {!isProviderRole || isClientRole ? (
           <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
             {isClientRole && (
@@ -336,7 +381,6 @@ export default function BookingsPage() {
               return (
                 <div key={booking.id} style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '22px' }}>
 
-                  {/* Header */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
                     <div style={{ flex: 1 }}>
                       <h3 style={{ fontSize: '15px', fontWeight: '700', color: C.text, margin: '0 0 6px' }}>{booking.title}</h3>
@@ -358,20 +402,19 @@ export default function BookingsPage() {
                     </div>
                   </div>
 
-                  {/* Description */}
+                  <BookingProgressTracker status={booking.status} />
+
                   {booking.description && (
                     <p style={{ fontSize: '13px', color: C.muted, margin: '0 0 12px', lineHeight: '1.6', background: C.sunk, padding: '10px 12px', borderRadius: '8px' }}>
                       {booking.description}
                     </p>
                   )}
 
-                  {/* Details */}
                   <div style={{ display: 'flex', gap: '16px', marginBottom: '14px', flexWrap: 'wrap' }}>
                     {booking.location && <span style={{ fontSize: '12px', color: C.muted }}>📍 {booking.location}</span>}
-                    {booking.scheduled_date && <span style={{ fontSize: '12px', color: C.muted }}>📅 {timeframeLabels[booking.scheduled_date] || booking.scheduled_date}</span>}
+                    {booking.scheduled_date && <span style={{ fontSize: '12px', color: C.muted }}>📅 {timeframeLabels[booking.scheduled_date] || new Date(booking.scheduled_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span>}
                   </div>
 
-                  {/* Escrow status */}
                   {(isPaid || isReleased) && (
                     <div style={{ background: isReleased ? '#0a1a0f' : '#0a1a2e', border: `1px solid ${isReleased ? C.oasis + '44' : '#86a98b44'}`, borderRadius: '8px', padding: '10px 14px', marginBottom: '14px' }}>
                       <p style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: isReleased ? C.oasis : '#86a98b' }}>
@@ -385,7 +428,6 @@ export default function BookingsPage() {
                     </div>
                   )}
 
-                  {/* Provider actions */}
                   {activeTab === 'provider' && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {booking.status === 'pending' && (
@@ -419,7 +461,6 @@ export default function BookingsPage() {
                     </div>
                   )}
 
-                  {/* Client actions */}
                   {activeTab === 'client' && (
                     <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                       {booking.status === 'quoted' && !isPaid && (

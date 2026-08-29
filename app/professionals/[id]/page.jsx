@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { nigeriaStates, nigeriaLGAs } from '@/lib/nigeria-lgas'
+import PortfolioSection from '@/components/PortfolioSection'
 
 const C = {
   surface: '#15120e', raised: '#201a14', sunk: '#0f0c09',
@@ -273,6 +274,8 @@ export default function ProfessionalProfilePage({ params }) {
             <div style={{ display: 'flex', gap: '12px' }}><span style={{ fontSize: '13px', color: C.muted, minWidth: '140px' }}>Verification</span><span style={{ fontSize: '13px', color: profile.is_verified ? C.oasis : C.muted, fontWeight: '600' }}>{profile.is_verified ? '✓ Verified' : 'Not verified'}</span></div>
           </div>
         </div>
+
+        <PortfolioSection profileId={profile.id} isOwner={currentUser?.id === profile.id} supabase={supabase} />
 
         <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '24px', marginBottom: '16px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
