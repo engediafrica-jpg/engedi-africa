@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -28,7 +28,7 @@ const roleLabel = {
 // project can meaningfully attach a quote request to.
 const bookableRoles = ['artisan', 'professional', 'service_provider']
 
-export default function BrowsePage() {
+function BrowsePageContent() {
   const supabase = createClient()
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -215,5 +215,13 @@ export default function BrowsePage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function BrowsePage() {
+  return (
+    <Suspense fallback={<div className="flex min-h-screen items-center justify-center bg-surface"><p className="text-text-muted">Loading...</p></div>}>
+      <BrowsePageContent />
+    </Suspense>
   )
 }
