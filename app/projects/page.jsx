@@ -95,8 +95,6 @@ export default function ProjectsHubPage() {
       title: form.title,
       description: form.description || null,
       location: location || null,
-      city: form.city || null,
-      state: form.state || null,
       budget: form.budget ? Number(form.budget) : null,
       status: 'planning',
     }).select().single()
