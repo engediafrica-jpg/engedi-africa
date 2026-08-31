@@ -171,10 +171,14 @@ export default function AdminPage() {
 
   const loadProjects = async () => {
     setProjectsLoading(true)
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('projects')
       .select('*, owner:profiles!projects_owner_id_fkey(full_name, email), project_stages(id, status), bookings(id, status, dispute_raised)')
       .order('created_at', { ascending: false })
+    if (error) {
+      console.error('Error loading projects:', error)
+      setMessage('Error loading projects: ' + error.message)
+    }
     setProjects(data || [])
     setProjectsLoading(false)
   }
