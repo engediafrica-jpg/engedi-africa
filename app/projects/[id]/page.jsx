@@ -1,5 +1,5 @@
 'use client'
-import { use, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -26,16 +26,26 @@ const stageStatusColors = {
 }
 const projectStatusOptions = ['planning', 'active', 'on_hold', 'completed']
 
+const bookingStatusColors = {
+  pending: { bg: '#1a1200', border: '#e0855444', color: '#e08554' },
+  quoted: { bg: '#0a1a2e', border: '#86a98b44', color: '#86a98b' },
+  paid: { bg: '#0a1a2e', border: '#86a98b44', color: '#86a98b' },
+  completed: { bg: '#0a1a0f', border: '#86a98b44', color: '#86a98b' },
+  delivered: { bg: '#0a1a0f', border: '#86a98b44', color: '#86a98b' },
+  cancelled: { bg: '#2e1712', border: '#e2695f44', color: '#e2695f' },
+  disputed: { bg: '#2e1712', border: '#e2695f44', color: '#e2695f' },
+  declined: { bg: '#2e1712', border: '#e2695f44', color: '#e2695f' },
+}
+
 export default function ProjectDetailPage({ params }) {
-  const { id } = use(params)
   const supabase = createClient()
   const router = useRouter()
   const [project, setProject] = useState(null)
   const [stages, setStages] = useState([])
   const [members, setMembers] = useState([])
+  const [projectBookings, setProjectBookings] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [fetchError, setFetchError] = useState('')
   const [activeTab, setActiveTab] = useState('stages')
   const [updatingStage, setUpdatingStage] = useState(null)
   const [showAddStage, setShowAddStage] = useState(false)
@@ -61,23 +71,25 @@ export default function ProjectDetailPage({ params }) {
       if (!sessionData.session) { router.push('/login'); return }
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       setProfile(profileData)
-      const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', id).single()
-      if (error || !projectData) {
-        console.error('Project fetch failed:', error)
-        setFetchError(error ? `${error.code || 'no code'}: ${error.message || 'unknown error'}` : 'No project returned')
-        setLoading(false)
-        return
-      }
+      const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', params.id).single()
+      if (error || !projectData) { router.push('/projects'); return }
       setProject(projectData)
       setProjectForm(projectData)
-      const { data: stagesData } = await supabase.from('project_stages').select('*').eq('project_id', id).order('order_index', { ascending: true })
+      const { data: stagesData } = await supabase.from('project_stages').select('*').eq('project_id', params.id).order('order_index', { ascending: true })
       setStages(stagesData || [])
-      const { data: membersData } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', id)
+      const { data: membersData } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', params.id)
       setMembers(membersData || [])
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('*, provider:profiles!bookings_provider_id_fkey(full_name, avatar_url, role)')
+        .eq('project_id', params.id)
+        .order('created_at', { ascending: false })
+      if (bookingsError) console.error('Error loading project bookings:', bookingsError)
+      setProjectBookings(bookingsData || [])
       setLoading(false)
     }
     getData()
-  }, [id])
+  }, [])
 
   const handleUpdateStage = async (stageId, newStatus) => {
     setUpdatingStage(stageId)
@@ -195,12 +207,6 @@ export default function ProjectDetailPage({ params }) {
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
 
-  if (fetchError) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px', padding: '24px', textAlign: 'center' }}>
-    <p style={{ color: C.danger, fontWeight: '700' }}>Couldn't load this project</p>
-    <p style={{ color: C.muted, fontSize: '13px', maxWidth: '400px' }}>{fetchError}</p>
-    <Link href="/projects" style={{ color: C.clay }}>← Back to Projects</Link>
-  </div>
-
   const progress = getProgress()
   const isOwner = profile?.id === project?.owner_id
   const isMember = members.some(m => m.user_id === profile?.id)
@@ -224,6 +230,7 @@ export default function ProjectDetailPage({ params }) {
 
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '40px 24px' }}>
 
+        {/* Project header */}
         <div style={{ background: C.raised, border: `1px solid ${C.clay}44`, borderRadius: '12px', padding: '28px', marginBottom: '20px' }}>
           {editingProject ? (
             <div>
@@ -301,10 +308,12 @@ export default function ProjectDetailPage({ params }) {
 
         {message && <p style={{ color: C.oasis, fontSize: '13px', marginBottom: '16px', fontWeight: '600' }}>{message}</p>}
 
+        {/* Tabs */}
         <div style={{ display: 'flex', gap: '8px', marginBottom: '20px' }}>
           {[
             { key: 'stages', label: 'Stages' },
             { key: 'team', label: 'Team' },
+            { key: 'bookings', label: `Bookings${projectBookings.length > 0 ? ` (${projectBookings.length})` : ''}` },
           ].map(tab => (
             <button key={tab.key} onClick={() => setActiveTab(tab.key)}
               style={{ padding: '9px 18px', borderRadius: '6px', border: `1px solid ${activeTab === tab.key ? C.clay : C.line}`, background: activeTab === tab.key ? C.clay : 'transparent', color: activeTab === tab.key ? C.sunk : C.muted, fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>
@@ -313,6 +322,7 @@ export default function ProjectDetailPage({ params }) {
           ))}
         </div>
 
+        {/* Stages */}
         {activeTab === 'stages' && (
           <div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '12px' }}>
@@ -389,6 +399,7 @@ export default function ProjectDetailPage({ params }) {
           </div>
         )}
 
+        {/* Team */}
         {activeTab === 'team' && (
           <div>
             {isOwner && (
@@ -468,6 +479,61 @@ export default function ProjectDetailPage({ params }) {
                     )}
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Bookings */}
+        {activeTab === 'bookings' && (
+          <div>
+            <div style={{ marginBottom: '16px' }}>
+              <Link href={`/browse?project=${project.id}`}
+                style={{ display: 'block', textAlign: 'center', background: 'transparent', color: C.clay, border: `1px dashed ${C.clay}44`, padding: '12px', borderRadius: '10px', fontWeight: '700', fontSize: '14px', textDecoration: 'none' }}>
+                + Request a Quote for This Project
+              </Link>
+            </div>
+
+            {projectBookings.length === 0 ? (
+              <div style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '12px', padding: '40px', textAlign: 'center' }}>
+                <p style={{ color: C.muted, fontSize: '15px', margin: '0 0 8px', fontWeight: '600' }}>No bookings linked to this project yet</p>
+                <p style={{ color: C.muted, fontSize: '13px', margin: 0 }}>Request a quote above to get started</p>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {projectBookings.map(booking => {
+                  const statusStyle = bookingStatusColors[booking.status] || bookingStatusColors.pending
+                  return (
+                    <div key={booking.id} style={{ background: C.raised, border: `1px solid ${C.line}`, borderRadius: '10px', padding: '16px 20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: C.sunk, border: `1px solid ${C.clay}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: C.clay, fontSize: '14px', overflow: 'hidden', flexShrink: 0 }}>
+                            {booking.provider?.avatar_url ? <img src={booking.provider.avatar_url} alt="avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : booking.provider?.full_name?.charAt(0)?.toUpperCase()}
+                          </div>
+                          <div>
+                            <p style={{ margin: '0 0 4px', fontWeight: '700', fontSize: '14px', color: C.text }}>{booking.title}</p>
+                            <p style={{ margin: 0, fontSize: '12px', color: C.muted }}>
+                              {booking.provider?.full_name} · {booking.provider?.role?.replace('_', ' ')}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          {booking.quoted_price
+                            ? <p style={{ margin: '0 0 4px', fontWeight: '800', fontSize: '14px', color: C.clay }}>₦{Number(booking.quoted_price).toLocaleString()}</p>
+                            : booking.budget ? <p style={{ margin: '0 0 4px', fontSize: '12px', color: C.muted }}>Budget: ₦{Number(booking.budget).toLocaleString()}</p>
+                            : null
+                          }
+                          <span style={{ background: statusStyle.bg, border: `1px solid ${statusStyle.border}`, color: statusStyle.color, fontSize: '11px', fontWeight: '600', padding: '2px 8px', borderRadius: '4px', textTransform: 'capitalize' }}>
+                            {booking.status.replace('_', ' ')}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                <Link href="/bookings" style={{ textAlign: 'center', color: C.muted, fontSize: '12px', textDecoration: 'none', marginTop: '4px' }}>
+                  Manage payments, quotes, and status changes in Bookings →
+                </Link>
               </div>
             )}
           </div>
