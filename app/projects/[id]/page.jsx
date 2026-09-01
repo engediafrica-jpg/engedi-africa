@@ -46,6 +46,7 @@ export default function ProjectDetailPage({ params }) {
   const [projectBookings, setProjectBookings] = useState([])
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [activeTab, setActiveTab] = useState('stages')
   const [updatingStage, setUpdatingStage] = useState(null)
   const [showAddStage, setShowAddStage] = useState(false)
@@ -71,13 +72,27 @@ export default function ProjectDetailPage({ params }) {
       if (!sessionData.session) { router.push('/login'); return }
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       setProfile(profileData)
+
       const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', params.id).single()
-      if (error || !projectData) { router.push('/projects'); return }
+      if (error) {
+        console.error('Error loading project:', error)
+        setLoadError(`${error.message} (code: ${error.code || 'none'})`)
+        setLoading(false)
+        return
+      }
+      if (!projectData) {
+        setLoadError('No project found for this id.')
+        setLoading(false)
+        return
+      }
+
       setProject(projectData)
       setProjectForm(projectData)
-      const { data: stagesData } = await supabase.from('project_stages').select('*').eq('project_id', params.id).order('order_index', { ascending: true })
+      const { data: stagesData, error: stagesError } = await supabase.from('project_stages').select('*').eq('project_id', params.id).order('order_index', { ascending: true })
+      if (stagesError) console.error('Error loading stages:', stagesError)
       setStages(stagesData || [])
-      const { data: membersData } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', params.id)
+      const { data: membersData, error: membersError } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', params.id)
+      if (membersError) console.error('Error loading members:', membersError)
       setMembers(membersData || [])
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -206,6 +221,16 @@ export default function ProjectDetailPage({ params }) {
   }
 
   if (loading) return <div style={{ minHeight: '100vh', background: C.surface, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><p style={{ color: C.muted }}>Loading...</p></div>
+
+  if (loadError) return (
+    <div style={{ minHeight: '100vh', background: C.surface, color: C.text, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px' }}>
+      <div style={{ background: C.raised, border: `1px solid ${C.danger}44`, borderRadius: '12px', padding: '28px', maxWidth: '480px', textAlign: 'center' }}>
+        <p style={{ color: C.danger, fontWeight: '700', margin: '0 0 8px' }}>Could not load this project</p>
+        <p style={{ color: C.muted, fontSize: '13px', margin: '0 0 16px' }}>{loadError}</p>
+        <Link href="/projects" style={{ background: C.clay, color: C.sunk, textDecoration: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: '700', fontSize: '13px' }}>← Back to Projects</Link>
+      </div>
+    </div>
+  )
 
   const progress = getProgress()
   const isOwner = profile?.id === project?.owner_id
