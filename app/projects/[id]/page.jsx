@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, use } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -38,6 +38,7 @@ const bookingStatusColors = {
 }
 
 export default function ProjectDetailPage({ params }) {
+  const { id } = use(params)
   const supabase = createClient()
   const router = useRouter()
   const [project, setProject] = useState(null)
@@ -73,7 +74,7 @@ export default function ProjectDetailPage({ params }) {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', sessionData.session.user.id).single()
       setProfile(profileData)
 
-      const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', params.id).single()
+      const { data: projectData, error } = await supabase.from('projects').select('*').eq('id', id).single()
       if (error) {
         console.error('Error loading project:', error)
         setLoadError(`${error.message} (code: ${error.code || 'none'})`)
@@ -88,23 +89,23 @@ export default function ProjectDetailPage({ params }) {
 
       setProject(projectData)
       setProjectForm(projectData)
-      const { data: stagesData, error: stagesError } = await supabase.from('project_stages').select('*').eq('project_id', params.id).order('order_index', { ascending: true })
+      const { data: stagesData, error: stagesError } = await supabase.from('project_stages').select('*').eq('project_id', id).order('order_index', { ascending: true })
       if (stagesError) console.error('Error loading stages:', stagesError)
       setStages(stagesData || [])
-      const { data: membersData, error: membersError } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', params.id)
+      const { data: membersData, error: membersError } = await supabase.from('project_members').select('*, user:profiles(full_name, role, avatar_url, is_verified)').eq('project_id', id)
       if (membersError) console.error('Error loading members:', membersError)
       setMembers(membersData || [])
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select('*, provider:profiles!bookings_provider_id_fkey(full_name, avatar_url, role)')
-        .eq('project_id', params.id)
+        .eq('project_id', id)
         .order('created_at', { ascending: false })
       if (bookingsError) console.error('Error loading project bookings:', bookingsError)
       setProjectBookings(bookingsData || [])
       setLoading(false)
     }
     getData()
-  }, [])
+  }, [id])
 
   const handleUpdateStage = async (stageId, newStatus) => {
     setUpdatingStage(stageId)
